@@ -435,6 +435,12 @@ function StoreBuilder.SetupLighting()
 			old:Destroy()
 		end
 	end
+	-- Only one Atmosphere renders, so drop any other (e.g. the default one in new places).
+	for _, other in Lighting:GetChildren() do
+		if other:IsA("Atmosphere") then
+			other:Destroy()
+		end
+	end
 	local atm = Instance.new("Atmosphere")
 	atm.Name = "PSX_Atmosphere"
 	atm.Density = 0.45
