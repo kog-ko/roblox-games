@@ -15,6 +15,7 @@ type Spill = {
 	IsFinal: boolean,
 	Holds: { [Player]: number },
 	Finished: { [Player]: number }, -- completed holds waiting for Triggered
+	Squeaks: { [Player]: Sound }, -- looping mop squeak per player, stopped when the hold ends
 	Done: boolean,
 }
 
@@ -91,6 +92,32 @@ local function canClean(player: Player, spill: Spill): boolean
 	return false
 end
 
+-- Loops a short slice of the squeak clip for as long as the player holds the prompt.
+local function startSqueak(spill: Spill, player: Player, anchor: BasePart)
+	local old = spill.Squeaks[player]
+	if old then
+		old:Destroy()
+	end
+	local s = Instance.new("Sound")
+	s.SoundId = Config.Sounds.Squeak
+	s.Volume = 0.6
+	s.RollOffMaxDistance = 60
+	s.Looped = true
+	s.PlaybackRegionsEnabled = true
+	s.LoopRegion = NumberRange.new(0, Config.SqueakLoopLength)
+	s.Parent = anchor
+	s:Play()
+	spill.Squeaks[player] = s
+end
+
+local function stopSqueak(spill: Spill, player: Player)
+	local s = spill.Squeaks[player]
+	spill.Squeaks[player] = nil
+	if s then
+		s:Destroy()
+	end
+end
+
 local function tweenSizes(spill: Spill, scale: number, t: number)
 	for i, p in spill.Parts do
 		local s = spill.Sizes[i]
@@ -103,6 +130,9 @@ end
 local function finish(spill: Spill, player: Player)
 	spill.Done = true
 	spill.Prompt.Enabled = false
+	for p in spill.Squeaks do
+		stopSqueak(spill, p)
+	end
 	active[spill.Model] = nil
 	playAt(spill.Parts[1].Position, Config.Sounds.Splash, 0.8)
 	tweenSizes(spill, 0.01, 0.25)
@@ -155,13 +185,13 @@ local function makeSpill(parts: { BasePart }, anchorPos: Vector3, isFinal: boole
 	for i, p in parts do
 		sizes[i] = p.Size
 	end
-	local spill: Spill = { Model = m, Parts = parts, Sizes = sizes, Prompt = prompt, IsFinal = isFinal, Holds = {}, Finished = {}, Done = false }
+	local spill: Spill = { Model = m, Parts = parts, Sizes = sizes, Prompt = prompt, IsFinal = isFinal, Holds = {}, Finished = {}, Squeaks = {}, Done = false }
 
 	prompt.PromptButtonHoldBegan:Connect(function(player)
 		if canClean(player, spill) then
 			spill.Holds[player] = os.clock()
 			tweenSizes(spill, 0.35, holdTime(player))
-			playAt(anchor.Position, Config.Sounds.Squeak, 0.6)
+			startSqueak(spill, player, anchor)
 		end
 	end)
 	local function shrinkBack()
@@ -172,6 +202,7 @@ local function makeSpill(parts: { BasePart }, anchorPos: Vector3, isFinal: boole
 	-- A completed hold fires HoldEnded *before* Triggered, so remember a full-length hold
 	-- here and let Triggered consume it.
 	prompt.PromptButtonHoldEnded:Connect(function(player)
+		stopSqueak(spill, player)
 		local began = spill.Holds[player]
 		spill.Holds[player] = nil
 		if began and os.clock() - began >= holdTime(player) * Config.CleanTimeTolerance then

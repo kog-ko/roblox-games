@@ -52,6 +52,7 @@ Config.Sounds = {
 	Chime = "rbxasset://sounds/electronicpingshort.wav", -- front door chime
 	Buzz = "rbxasset://sounds/clickfast.wav", -- lights cutting out
 }
+Config.SqueakLoopLength = 0.8 -- seconds of the squeak clip looped while mopping
 
 -- ===== IDs: fill these in (0 = disabled, the game just skips it) =====
 -- Badges: Creator Dashboard > your experience > Engagement > Badges > Create a Badge.

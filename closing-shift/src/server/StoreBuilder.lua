@@ -435,9 +435,10 @@ function StoreBuilder.SetupLighting()
 			old:Destroy()
 		end
 	end
-	-- Only one Atmosphere renders, so drop any other (e.g. the default one in new places).
+	-- Only one Atmosphere renders, so drop any other (e.g. the default one in new places),
+	-- plus the template's post effects, which fight the PSX grade.
 	for _, other in Lighting:GetChildren() do
-		if other:IsA("Atmosphere") then
+		if other:IsA("Atmosphere") or other:IsA("BloomEffect") or other:IsA("SunRaysEffect") or other:IsA("DepthOfFieldEffect") then
 			other:Destroy()
 		end
 	end
