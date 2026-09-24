@@ -1,0 +1,39 @@
+---
+# Minimal Roblox globals stub (the full std needs a download). Used by selene for syntax/lint checks.
+base: luau
+name: rbx
+globals:
+  game:
+    any: true
+  workspace:
+    any: true
+  script:
+    any: true
+  Instance:
+    any: true
+  Vector3:
+    any: true
+  CFrame:
+    any: true
+  Color3:
+    any: true
+  UDim2:
+    any: true
+  UDim:
+    any: true
+  Vector2:
+    any: true
+  Enum:
+    any: true
+  Random:
+    any: true
+  TweenInfo:
+    any: true
+  task:
+    any: true
+  typeof:
+    any: true
+  Font:
+    any: true
+  warn:
+    any: true

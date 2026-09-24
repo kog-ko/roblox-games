@@ -1,0 +1,4 @@
+std = "rbx"
+
+[rules]
+global_usage = "allow" # _G is only used for Studio-only playtest commands

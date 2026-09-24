@@ -1,0 +1,31 @@
+{
+  "name": "ClosingShift",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      },
+      "Remotes": {
+        "$className": "Folder",
+        "ReadyUp": { "$className": "RemoteEvent" },
+        "RequestCoffee": { "$className": "RemoteEvent" },
+        "Results": { "$className": "RemoteEvent" },
+        "PayoffCue": { "$className": "RemoteEvent" },
+        "ShowNote": { "$className": "RemoteEvent" }
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    }
+  }
+}
