@@ -8,8 +8,10 @@ local function make(gold: boolean): Tool
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
 	tool:SetAttribute("IsMop", true)
-	-- Hand holds the stick about 1 stud from the top; the head hangs toward the floor.
-	tool.Grip = CFrame.new(0, -1.5, 0)
+	-- Hand holds the stick 1.5 studs from the top; the stick tilts forward so the head
+	-- (at the bottom, counter-rotated to lie flat) rests just above the floor in front of you.
+	local tilt = math.rad(62)
+	tool.Grip = CFrame.new(0, 1, 0) * CFrame.Angles(-tilt, 0, 0)
 
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
@@ -27,7 +29,7 @@ local function make(gold: boolean): Tool
 	head.Color = if gold then Color3.fromRGB(245, 215, 110) else Color3.fromRGB(200, 200, 185)
 	head.CanCollide = false
 	head.Massless = true
-	head.CFrame = handle.CFrame * CFrame.new(0, 2.6, 0)
+	head.CFrame = handle.CFrame * CFrame.new(0, -2.6, 0) * CFrame.Angles(-tilt, 0, 0)
 	head.Parent = tool
 
 	local weld = Instance.new("WeldConstraint")

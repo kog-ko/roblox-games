@@ -14,6 +14,7 @@ type Spill = {
 	Prompt: ProximityPrompt,
 	IsFinal: boolean,
 	Holds: { [Player]: number },
+	Finished: { [Player]: number }, -- completed holds waiting for Triggered
 	Done: boolean,
 }
 
@@ -154,7 +155,7 @@ local function makeSpill(parts: { BasePart }, anchorPos: Vector3, isFinal: boole
 	for i, p in parts do
 		sizes[i] = p.Size
 	end
-	local spill: Spill = { Model = m, Parts = parts, Sizes = sizes, Prompt = prompt, IsFinal = isFinal, Holds = {}, Done = false }
+	local spill: Spill = { Model = m, Parts = parts, Sizes = sizes, Prompt = prompt, IsFinal = isFinal, Holds = {}, Finished = {}, Done = false }
 
 	prompt.PromptButtonHoldBegan:Connect(function(player)
 		if canClean(player, spill) then
@@ -163,21 +164,41 @@ local function makeSpill(parts: { BasePart }, anchorPos: Vector3, isFinal: boole
 			playAt(anchor.Position, Config.Sounds.Squeak, 0.6)
 		end
 	end)
-	prompt.PromptButtonHoldEnded:Connect(function(player)
-		spill.Holds[player] = nil
-		if not spill.Done and next(spill.Holds) == nil then
+	local function shrinkBack()
+		if not spill.Done and next(spill.Holds) == nil and next(spill.Finished) == nil then
 			tweenSizes(spill, 1, 0.3)
+		end
+	end
+	-- A completed hold fires HoldEnded *before* Triggered, so remember a full-length hold
+	-- here and let Triggered consume it.
+	prompt.PromptButtonHoldEnded:Connect(function(player)
+		local began = spill.Holds[player]
+		spill.Holds[player] = nil
+		if began and os.clock() - began >= holdTime(player) * Config.CleanTimeTolerance then
+			local stamp = os.clock()
+			spill.Finished[player] = stamp
+			task.delay(1, function() -- Triggered never came
+				if spill.Finished[player] == stamp then
+					spill.Finished[player] = nil
+					shrinkBack()
+				end
+			end)
+		else
+			shrinkBack()
 		end
 	end)
 	prompt.Triggered:Connect(function(player)
-		local began = spill.Holds[player]
-		spill.Holds[player] = nil
 		-- The hold must really have happened, for about as long as it should take.
-		if not began or os.clock() - began < holdTime(player) * Config.CleanTimeTolerance then
-			return
-		end
-		if canClean(player, spill) then
+		local began = spill.Holds[player]
+		local finished = spill.Finished[player]
+		spill.Holds[player] = nil
+		spill.Finished[player] = nil
+		local fullHold = finished ~= nil
+			or (began ~= nil and os.clock() - began >= holdTime(player) * Config.CleanTimeTolerance)
+		if fullHold and canClean(player, spill) then
 			finish(spill, player)
+		else
+			shrinkBack()
 		end
 	end)
 

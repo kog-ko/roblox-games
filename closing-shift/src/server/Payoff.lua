@@ -15,10 +15,9 @@ local showNote = remotes:WaitForChild("ShowNote") :: RemoteEvent
 function Payoff.Run(cleaner: Player?)
 	store:SetAttribute("BackRoomLit", true)
 	prompt.Enabled = true
-	local frame = store:FindFirstChild("PhotoFrame", true) :: BasePart
-	local note = store:FindFirstChild("Note", true) :: BasePart
-	-- camera: just past the open door, looking at the desk and the photo
-	local camCF = CFrame.lookAt(Vector3.new(36.5, 7, -5.5), (frame.Position + note.Position) / 2 + Vector3.new(0, 1, 0))
+	-- camera: by the front wall, looking past the desk at the old photos and the big frame.
+	-- Aimed away from the open door, which would otherwise fill the left of the shot.
+	local camCF = CFrame.lookAt(Vector3.new(38, 7.5, -5.2), Vector3.new(43, 6, -14))
 	payoffCue:FireAllClients(camCF, if cleaner then cleaner.DisplayName else "")
 	task.wait(Config.PayoffTime)
 end
