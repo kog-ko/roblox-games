@@ -92,10 +92,6 @@ local function runShift(): number?
 		local char = p.Character
 		if char then
 			char:PivotTo(spawnCFrame())
-			local hum = char:FindFirstChildOfClass("Humanoid")
-			if hum then
-				hum.WalkSpeed = Config.WalkSpeed
-			end
 		end
 	end
 	setPhase("Shift")
@@ -179,10 +175,7 @@ function RoundManager.Init(s: Instance)
 		end
 	end)
 	local function onCharacter(player: Player, char: Model)
-		local hum = char:WaitForChild("Humanoid", 5) :: Humanoid?
-		if hum then
-			hum.WalkSpeed = Config.WalkSpeed
-		end
+		char:WaitForChild("Humanoid", 5)
 		local phase = ReplicatedStorage:GetAttribute("Phase")
 		if phase == "Shift" or phase == "Payoff" then
 			task.wait() -- let the new Backpack settle
@@ -191,6 +184,7 @@ function RoundManager.Init(s: Instance)
 	end
 	local function onPlayer(player: Player)
 		player:SetAttribute("Cleaned", 0)
+		player.CameraMode = Enum.CameraMode.LockFirstPerson
 		player.CharacterAdded:Connect(function(char)
 			onCharacter(player, char)
 		end)

@@ -18,18 +18,12 @@ function Monetization.ApplyCoffee(player: Player): boolean
 	if not inShift() or player:GetAttribute("CoffeeUsed") then
 		return false
 	end
-	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if not hum then
+	if not (player.Character and player.Character:FindFirstChildOfClass("Humanoid")) then
 		return false
 	end
+	-- The client's Movement module reads CoffeeUntil and applies Config.CoffeeWalkSpeed.
 	player:SetAttribute("CoffeeUsed", true)
 	player:SetAttribute("CoffeeUntil", workspace:GetServerTimeNow() + Config.CoffeeDuration)
-	hum.WalkSpeed = Config.CoffeeWalkSpeed
-	task.delay(Config.CoffeeDuration, function()
-		if hum.Parent then
-			hum.WalkSpeed = Config.WalkSpeed
-		end
-	end)
 	return true
 end
 

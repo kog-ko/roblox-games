@@ -26,7 +26,7 @@ local function make(gold: boolean): Tool
 	head.Name = "MopHead"
 	head.Size = Vector3.new(1.6, 0.5, 0.9)
 	head.Material = Enum.Material.SmoothPlastic
-	head.Color = if gold then Color3.fromRGB(245, 215, 110) else Color3.fromRGB(200, 200, 185)
+	head.Color = if gold then Color3.fromRGB(245, 215, 110) else Color3.fromRGB(170, 158, 110) -- dirty string mop
 	head.CanCollide = false
 	head.Massless = true
 	head.CFrame = handle.CFrame * CFrame.new(0, -2.6, 0) * CFrame.Angles(-tilt, 0, 0)
@@ -41,13 +41,28 @@ end
 
 local templates = { [false] = make(false), [true] = make(true) }
 
+-- Gives a fresh mop and puts it straight in the player's hands (there is no hotbar).
+-- While the shift runs, an unequipped mop is re-equipped, so it can't be put away.
 function Mop.Give(player: Player)
 	Mop.Remove(player)
 	local gold = player:GetAttribute("IndustrialMop") == true
 	local backpack = player:FindFirstChildOfClass("Backpack")
-	if backpack then
-		templates[gold]:Clone().Parent = backpack
+	if not backpack then
+		return
 	end
+	local tool = templates[gold]:Clone()
+	tool.Parent = backpack
+	local function equip()
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hum and hum.Health > 0 and tool.Parent == backpack then
+			hum:EquipTool(tool)
+		end
+	end
+	tool.Unequipped:Connect(function()
+		task.defer(equip)
+	end)
+	equip()
 end
 
 function Mop.Remove(player: Player)

@@ -37,6 +37,27 @@ Config.CoffeeWalkSpeed = 24
 Config.CoffeeDuration = 30
 Config.IndustrialMopSpeedup = 0.25 -- 25% faster cleaning
 
+-- Sprint (client-side feel; the server sanity-checks speed later)
+Config.Sprint = {
+	Multiplier = 1.45, -- WalkSpeed x this while sprinting
+	Stamina = 5, -- seconds of sprint from full
+	RegenPerSecond = 0.7, -- stamina seconds regained per second
+	RegenDelay = 0.8, -- pause after sprinting before regen starts
+}
+
+-- First person + mop viewmodel
+Config.FirstPerson = {
+	HandOffset = Vector3.new(0.95, -0.95, -1.2), -- where the hands hold the stick, in camera space
+	HeadOffset = Vector3.new(0.2, -2.1, -4.2), -- where the mop head sits, in camera space
+	Tint = Color3.fromRGB(205, 230, 205), -- viewmodel colour grade (GUIs skip ColorCorrection)
+	Ambient = Color3.fromRGB(120, 130, 120), -- viewmodel lighting with the power on
+	LightColor = Color3.fromRGB(170, 185, 165),
+	SwayAmount = 0.08, -- how far the mop lags behind camera turns
+	BobAmount = 0.06, -- walking bob (studs)
+	ScrubAmount = 0.35, -- how far the head moves back and forth while mopping
+	ScrubSpeed = 11, -- scrub strokes (radians/second)
+}
+
 -- Scoring / badges
 Config.PerfectShiftTime = 5 * 60 -- "Perfect Shift" = cleaned under this many seconds
 Config.LeaderboardSize = 10
