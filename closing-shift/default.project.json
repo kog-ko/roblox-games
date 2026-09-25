@@ -12,7 +12,8 @@
         "RequestCoffee": { "$className": "RemoteEvent" },
         "Results": { "$className": "RemoteEvent" },
         "PayoffCue": { "$className": "RemoteEvent" },
-        "ShowNote": { "$className": "RemoteEvent" }
+        "ShowNote": { "$className": "RemoteEvent" },
+        "Flashlight": { "$className": "RemoteEvent" }
       }
     },
     "ServerScriptService": {

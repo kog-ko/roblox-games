@@ -9,7 +9,7 @@ if not remotes then
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
 end
-for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote" } do
+for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name
@@ -42,6 +42,14 @@ Payoff.Init(s)
 Monetization.Init()
 RoundManager.Init(s)
 task.spawn(RoundManager.Run)
+
+-- Flashlight on/off is cosmetic: store it so every client can draw the beam.
+local flashlightRemote = (remotes :: Instance):WaitForChild("Flashlight") :: RemoteEvent
+flashlightRemote.OnServerEvent:Connect(function(player, on)
+	if typeof(on) == "boolean" then
+		player:SetAttribute("FlashlightOn", on)
+	end
+end)
 
 -- Studio-only playtest commands. From the server command bar while playing, e.g.:
 --   _G.ClosingShift.Start()  _G.ClosingShift.CleanAll()  _G.ClosingShift.Timeout()  _G.ClosingShift.Event("Mannequin")

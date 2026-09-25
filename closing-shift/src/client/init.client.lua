@@ -6,10 +6,12 @@ local Players = game:GetService("Players")
 local playerGui = (Players.LocalPlayer :: Player):WaitForChild("PlayerGui") :: PlayerGui
 playerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeSensor
 
-require(script:WaitForChild("Scanlines")).Start()
+require(script:WaitForChild("Overlay")).Start()
 require(script:WaitForChild("LightsFx")).Start()
 require(script:WaitForChild("Movement")).Start()
+require(script:WaitForChild("CameraFx")).Start()
 require(script:WaitForChild("Viewmodel")).Start()
+require(script:WaitForChild("Flashlight")).Start()
 require(script:WaitForChild("Prompts")).Start()
 require(script:WaitForChild("PayoffFx")).Start()
 require(script:WaitForChild("Hud")).Start()

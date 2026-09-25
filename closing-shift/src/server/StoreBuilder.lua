@@ -6,6 +6,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
+local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 
 local StoreBuilder = {}
 
@@ -444,18 +445,18 @@ function StoreBuilder.SetupLighting()
 	end
 	local atm = Instance.new("Atmosphere")
 	atm.Name = "PSX_Atmosphere"
-	atm.Density = 0.45
+	atm.Density = Config.PSX.FogDensity
 	atm.Offset = 0
 	atm.Color = Color3.fromRGB(18, 22, 20)
 	atm.Decay = Color3.fromRGB(8, 10, 10)
 	atm.Glare = 0
-	atm.Haze = 2.5
+	atm.Haze = Config.PSX.FogHaze
 	atm.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "PSX_ColorCorrection"
-	cc.Saturation = -0.35
-	cc.Contrast = 0.25
-	cc.TintColor = Color3.fromRGB(225, 245, 225)
+	cc.Saturation = Config.PSX.Saturation
+	cc.Contrast = Config.PSX.Contrast
+	cc.TintColor = Config.PSX.Tint
 	cc.Parent = Lighting
 end
 

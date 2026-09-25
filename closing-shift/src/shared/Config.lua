@@ -65,6 +65,36 @@ Config.LeaderboardRefresh = 60
 Config.AutosaveInterval = 120
 Config.DataRetries = 3
 
+-- PSX look. Every heavy effect has an on/off switch here.
+Config.PSX = {
+	FieldOfView = 70,
+	CameraSnap = true, -- snap camera rotation to small steps for a low-framerate feel
+	SnapDegrees = 0.6,
+	HeadBob = true,
+	BobWalk = 0.08, -- studs
+	BobSprint = 0.16,
+	Overlay = true, -- scanlines + pixel grid
+	PixelGrid = true, -- faint vertical lines that, with the scanlines, read as big pixels
+	Vignette = true,
+	Flicker = true, -- slow screen brightness flicker
+	-- Colour grade and fog (applied by the server's StoreBuilder.SetupLighting)
+	Saturation = -0.55,
+	Contrast = 0.4,
+	Tint = Color3.fromRGB(200, 240, 225), -- green-cyan
+	FogDensity = 0.58,
+	FogHaze = 3,
+}
+
+-- Flashlight (F / touch). Battery drains while on and slowly recharges while off.
+Config.Flashlight = {
+	Brightness = 3,
+	Range = 45,
+	Angle = 50, -- degrees
+	Battery = 45, -- seconds of light from full
+	RechargePerSecond = 0.5, -- battery seconds regained per second while off
+	MinToTurnOn = 3, -- a drained light won't switch back on until it has this much
+}
+
 -- Sounds. These are built-in engine sounds, so they always load and can't be moderated away.
 -- Swap in any asset ID ("rbxassetid://123") if you prefer something else.
 Config.Sounds = {
