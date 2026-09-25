@@ -1,35 +1,38 @@
 --!strict
--- CLOSING SHIFT: every tunable number and every ID lives here.
+-- CLOSING SHIFT: global tunables live here; content lives in the Data tables below it
+-- (Shared/Data: Nights, Events, Modifiers, Stores, Upgrades, Monetization).
 -- This is in ReplicatedStorage because the client needs the timings and pass/product IDs.
 -- There are no secrets in here, so that's fine.
 
+local Data = script.Parent:WaitForChild("Data")
+
 local Config = {}
 
--- Round flow (seconds)
+-- Content tables
+Config.Nights = require(Data:WaitForChild("Nights"))
+Config.Events = require(Data:WaitForChild("Events"))
+Config.Modifiers = require(Data:WaitForChild("Modifiers"))
+Config.Stores = require(Data:WaitForChild("Stores"))
+Config.Upgrades = require(Data:WaitForChild("Upgrades"))
+Config.Monetization = require(Data:WaitForChild("Monetization"))
+Config.DefaultNight = 1
+Config.DefaultStore = "QuikStop"
+
+-- Round flow (seconds). Shift length and spill count are per night (Data/Nights).
 Config.IntermissionTime = 15
-Config.ShiftLength = 8 * 60 -- real seconds that map to 2:00 AM -> 6:00 AM
 Config.ShiftStartHour = 2
 Config.ShiftEndHour = 6
 Config.PayoffTime = 12 -- back-room reveal before the results screen
 Config.ResultsTime = 10
 Config.LightsOutOnLoseTime = 2.5
 
--- Spills
-Config.SpillCount = 12 -- total per round; the last one always spawns in the back room
+-- Spills (the last spill of every shift always spawns in the back room)
 Config.SpillMinRadius = 2.2
 Config.SpillMaxRadius = 3.6
 Config.CleanHoldTime = 1.6 -- ProximityPrompt hold duration (seconds)
 Config.CleanDistance = 8 -- prompt activation distance (studs)
 Config.CleanServerSlack = 3 -- extra studs the server tolerates for lag
 Config.CleanTimeTolerance = 0.8 -- server accepts a hold this fraction of the expected length (ping)
-
--- Wrong events (the horror layer)
-Config.EventMinGap = 45
-Config.EventMaxGap = 75
-Config.SignGlitchTime = 4
-Config.LightsOutTime = 2
-Config.MannequinVanishDistance = 15
-Config.BehindPlayerDistance = 6
 
 -- Speeds
 Config.WalkSpeed = 16
@@ -59,7 +62,7 @@ Config.FirstPerson = {
 }
 
 -- Scoring / badges
-Config.PerfectShiftTime = 5 * 60 -- "Perfect Shift" = cleaned under this many seconds
+Config.PerfectShiftFraction = 0.6 -- "Perfect Shift" = cleaned in under this fraction of the night's clock
 Config.LeaderboardSize = 10
 Config.LeaderboardRefresh = 60
 Config.AutosaveInterval = 120
@@ -119,25 +122,10 @@ Config.ScrubLoop = NumberRange.new(1, 3) -- seconds of the scrub clip looped whi
 Config.PitchVariation = 0.08 -- every one-shot plays at 1 +/- this speed so repeats don't sound robotic
 Config.Volumes = { Ambient = 0.35, Hum = 0.25, Fridge = 0.3, UI = 0.4, Sting = 0.8 }
 
--- ===== IDs: fill these in (0 = disabled, the game just skips it) =====
--- Badges: Creator Dashboard > your experience > Engagement > Badges > Create a Badge.
---   Copy the number from the badge's URL or its "Copy Asset ID" menu.
-Config.Badges = {
-	FirstShift = 0,
-	PerfectShift = 0,
-	FoundTheNote = 0,
-}
-
--- Game pass: Creator Dashboard > your experience > Monetization > Passes > Create a Pass.
---   Put it on sale, then copy its ID.
-Config.GamePasses = {
-	IndustrialMop = 0,
-}
-
--- Developer product: Creator Dashboard > your experience > Monetization > Developer Products > Create.
-Config.DevProducts = {
-	ExtraCoffee = 0,
-}
+-- Old names kept for existing code; the IDs themselves live in Data/Monetization.
+Config.Badges = Config.Monetization.Badges
+Config.GamePasses = Config.Monetization.GamePasses
+Config.DevProducts = Config.Monetization.Products
 
 -- DataStore names (bump the version suffix to wipe test data)
 Config.DataStoreName = "ClosingShift_Players_v1"

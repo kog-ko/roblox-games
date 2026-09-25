@@ -1,9 +1,10 @@
 --!strict
--- The horror layer: one "wrong" event every 45-75s, each at most once per round.
--- Tension only: no damage, no chasing, nothing gory.
+-- The horror layer. Each "wrong" event is a module in Server/Events, registered by its file name;
+-- a night's data (Data/Nights) lists which events may happen and how far apart. Each event runs at
+-- most once per shift. Power cuts are a separate timer, switched on per night.
+-- Tension only: no damage, nothing gory.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local Config = require(ReplicatedStorage.Shared.Config)
 local SpillService = require(script.Parent.SpillService)
@@ -12,7 +13,27 @@ local StoreBuilder = require(script.Parent.StoreBuilder)
 local EventDirector = {}
 local store: Instance
 local runId = 0
+local powerHolds = 0
 local rng = Random.new()
+
+-- What every event module receives.
+export type Context = {
+	store: Instance,
+	props: Instance,
+	rng: Random,
+	tuning: { [string]: any },
+	spills: typeof(SpillService),
+	builder: typeof(StoreBuilder),
+	isCurrent: () -> boolean,
+	aisles: () -> { Instance },
+	roots: () -> { BasePart },
+	setSignNumbers: ({ number }) -> (),
+	playSound: (parent: Instance, id: string, volume: number) -> (),
+	cutPower: () -> () -> (),
+}
+type Handler = (ctx: Context) -> ()
+
+local handlers: { [string]: Handler } = {}
 
 local function aisles(): { Instance }
 	local list = (store:FindFirstChild("Aisles") :: Instance):GetChildren()
@@ -54,159 +75,128 @@ local function playSound(parent: Instance, id: string, volume: number)
 	Debris:AddItem(s, 6)
 end
 
-local function buildMannequin(cf: CFrame): Model
-	local m = Instance.new("Model")
-	m.Name = "Mannequin"
-	local skin = Color3.fromRGB(205, 200, 188)
-	local function block(name: string, size: Vector3, offset: Vector3)
-		local p = Instance.new("Part")
-		p.Name = name
-		p.Anchored = true
-		p.CanCollide = false
-		p.CastShadow = false
-		p.Material = Enum.Material.SmoothPlastic
-		p.Color = skin
-		p.Size = size
-		p.CFrame = cf * CFrame.new(offset)
-		p.Parent = m
+-- Turns the store's power off until every holder has released it, so a short LightsOut
+-- can't switch the lights back on in the middle of a longer power cut.
+-- Returns the release function.
+local function cutPower(): () -> ()
+	powerHolds += 1
+	if powerHolds == 1 then
+		store:SetAttribute("Power", false)
+		playSound(store:FindFirstChild("Lights") :: Instance, Config.Sounds.Buzz, 0.7)
 	end
-	block("Head", Vector3.new(1.2, 1.3, 1.2), Vector3.new(0, 6.1, 0))
-	block("Torso", Vector3.new(2, 2.4, 1), Vector3.new(0, 4.2, 0))
-	block("LeftArm", Vector3.new(0.7, 2.4, 0.7), Vector3.new(-1.4, 4.2, 0))
-	block("RightArm", Vector3.new(0.7, 2.4, 0.7), Vector3.new(1.4, 4.2, 0))
-	block("LeftLeg", Vector3.new(0.8, 3, 0.8), Vector3.new(-0.5, 1.5, 0))
-	block("RightLeg", Vector3.new(0.8, 3, 0.8), Vector3.new(0.5, 1.5, 0))
-	m.Parent = store:FindFirstChild("EventProps")
-	return m
-end
-
-local events: { [string]: () -> () } = {}
-
--- Aisle signs briefly read 1, 2, 3, 5.
-events.SignGlitch = function()
-	setSignNumbers({ 1, 2, 3, 5 })
-	task.wait(Config.SignGlitchTime)
-	setSignNumbers({ 1, 2, 3, 4 })
-end
-
--- Footprints lead from the aisles into the back room.
-events.Footprints = function()
-	SpillService.SpawnFootprints({
-		Vector3.new(17, 0, 4), Vector3.new(17, 0, -13), Vector3.new(29, 0, -12.5), Vector3.new(37, 0, -12),
-	}, 3)
-end
-
--- The door chime rings. Nobody is there.
-events.DoorChime = function()
-	local bell = CollectionService:GetTagged("DoorChime")[1]
-	if bell then
-		playSound(bell, Config.Sounds.Chime, 1)
-	end
-end
-
--- One aisle becomes a wall of the same product.
-events.IdenticalAisle = function()
-	local list = aisles()
-	StoreBuilder.MakeIdentical(list[rng:NextInteger(1, #list)])
-end
-
--- Lights die for 2 seconds; when they come back there's a spill behind whoever is nearest the back room.
-events.LightsOut = function()
-	local myRun = runId
-	store:SetAttribute("Power", false)
-	playSound(store:FindFirstChild("Lights") :: Instance, Config.Sounds.Buzz, 0.7)
-	task.wait(Config.LightsOutTime)
-	local target = (store:FindFirstChild("FinalSpillMarker", true) :: BasePart).Position
-	local best, bestDist = nil, math.huge
-	for _, r in roots() do
-		local d = (r.Position - target).Magnitude
-		if d < bestDist then
-			best, bestDist = r, d
+	local released = false
+	return function()
+		if released then
+			return
+		end
+		released = true
+		powerHolds = math.max(0, powerHolds - 1)
+		if powerHolds == 0 then
+			store:SetAttribute("Power", true)
 		end
 	end
-	if best and myRun == runId and not SpillService.IsFinalPhase() then
-		local look = Vector3.new(best.CFrame.LookVector.X, 0, best.CFrame.LookVector.Z)
-		look = if look.Magnitude > 0.01 then look.Unit else Vector3.zAxis
-		local pos = best.Position - look * Config.BehindPlayerDistance
-		if pos.X > 30.5 then -- in the back room
-			pos = Vector3.new(math.clamp(pos.X, 32, 46), 0, math.clamp(pos.Z, -19, -5))
-		else
-			pos = Vector3.new(math.clamp(pos.X, -28, 29), 0, math.clamp(pos.Z, -15, 18))
-		end
-		SpillService.Spawn(pos)
-	end
-	if myRun == runId then -- the round may have ended in the dark
-		store:SetAttribute("Power", true)
-	end
 end
 
--- A mannequin stands at the end of an aisle. It's gone once anyone gets within 15 studs.
-events.Mannequin = function()
-	local rs = roots()
-	local bestPos, bestScore = nil, -1
-	for _, a in aisles() do
-		local plinth = a:FindFirstChild("Plinth") :: BasePart
-		local pos = Vector3.new(plinth.Position.X, 0, plinth.Position.Z - plinth.Size.Z / 2 - 1.5)
-		local nearest = math.huge
-		for _, r in rs do
-			nearest = math.min(nearest, (r.Position - pos).Magnitude)
-		end
-		if nearest > bestScore then
-			bestPos, bestScore = pos, nearest
-		end
-	end
-	if not bestPos then
+local function context(name: string, myRun: number): Context
+	return {
+		store = store,
+		props = store:FindFirstChild("EventProps") :: Instance,
+		rng = rng,
+		tuning = Config.Events[name] or {},
+		spills = SpillService,
+		builder = StoreBuilder,
+		isCurrent = function()
+			return myRun == runId
+		end,
+		aisles = aisles,
+		roots = roots,
+		setSignNumbers = setSignNumbers,
+		playSound = playSound,
+		cutPower = cutPower,
+	}
+end
+
+local function run(name: string, myRun: number)
+	local fn = handlers[name]
+	if not fn then
+		warn("[EventDirector] no handler for event", name)
 		return
 	end
-	local m = buildMannequin(CFrame.lookAt(bestPos, bestPos + Vector3.zAxis))
-	local myRun = runId
-	local t = os.clock()
-	while m.Parent and myRun == runId and os.clock() - t < 90 do
-		for _, r in roots() do
-			if (r.Position - bestPos).Magnitude < Config.MannequinVanishDistance then
-				m:Destroy()
-				return
-			end
+	print("[EventDirector] event:", name)
+	task.spawn(function()
+		local ok, err = pcall(fn, context(name, myRun))
+		if not ok then
+			warn("[EventDirector]", name, "failed:", err)
 		end
-		task.wait(0.2)
-	end
-	m:Destroy()
+	end)
 end
 
-local SPILL_EVENTS = { Footprints = true, LightsOut = true }
+local function weight(name: string): number
+	local t = Config.Events[name]
+	return (t and t.Weight) or 1
+end
 
-function EventDirector.Start()
+local function pickWeighted(choices: { string }): string
+	local total = 0
+	for _, name in choices do
+		total += weight(name)
+	end
+	local roll = rng:NextNumber() * total
+	for _, name in choices do
+		roll -= weight(name)
+		if roll <= 0 then
+			return name
+		end
+	end
+	return choices[#choices]
+end
+
+local function powerCutLoop(rules: any, myRun: number)
+	local pc = rules.PowerCuts
+	while true do
+		task.wait(rng:NextNumber(pc.Every[1], pc.Every[2]))
+		if myRun ~= runId then
+			return
+		end
+		print("[EventDirector] power cut")
+		local release = cutPower()
+		task.wait(rng:NextNumber(pc.Duration[1], pc.Duration[2]))
+		release()
+		if myRun ~= runId then
+			return
+		end
+	end
+end
+
+-- Starts the event timer (and power cuts, if the night has them) for one shift.
+function EventDirector.Start(rules: any)
 	runId += 1
 	local myRun = runId
 	local used: { [string]: boolean } = {}
 	task.spawn(function()
-		local gap = rng:NextNumber(Config.EventMinGap, Config.EventMaxGap)
 		while true do
-			task.wait(gap)
+			task.wait(rng:NextNumber(rules.EventGap[1], rules.EventGap[2]))
 			if myRun ~= runId then
 				return
 			end
 			local choices = {}
-			for name in events do
-				if not used[name] and not (SPILL_EVENTS[name] and SpillService.IsFinalPhase()) then
+			for _, name in rules.Events do
+				local t = Config.Events[name]
+				if handlers[name] and not used[name] and not (t and t.UsesSpills and SpillService.IsFinalPhase()) then
 					table.insert(choices, name)
 				end
 			end
 			if #choices == 0 then
 				return
 			end
-			local pick = choices[rng:NextInteger(1, #choices)]
+			local pick = pickWeighted(choices)
 			used[pick] = true
-			print("[EventDirector] event:", pick)
-			task.spawn(function()
-				local ok, err = pcall(events[pick])
-				if not ok then
-					warn("[EventDirector]", pick, "failed:", err)
-				end
-			end)
-			gap = rng:NextNumber(Config.EventMinGap, Config.EventMaxGap)
+			run(pick, myRun)
 		end
 	end)
+	if rules.PowerCuts.Enabled then
+		task.spawn(powerCutLoop, rules, myRun)
+	end
 end
 
 function EventDirector.Stop()
@@ -220,19 +210,32 @@ function EventDirector.Cleanup()
 	StoreBuilder.RestockAll(store)
 	local props = store:FindFirstChild("EventProps") :: Instance
 	props:ClearAllChildren()
+	powerHolds = 0
 	store:SetAttribute("Power", true)
 end
 
 -- For playtesting: run one event by name right now.
 function EventDirector.Force(name: string)
-	local fn = events[name]
-	if fn then
-		task.spawn(fn)
+	run(name, runId)
+end
+
+-- Registered event names (the module names in Server/Events).
+function EventDirector.Names(): { string }
+	local out = {}
+	for name in handlers do
+		table.insert(out, name)
 	end
+	table.sort(out)
+	return out
 end
 
 function EventDirector.Init(s: Instance)
 	store = s
+	for _, m in (script.Parent:WaitForChild("Events") :: Instance):GetChildren() do
+		if m:IsA("ModuleScript") then
+			handlers[m.Name] = require(m) :: any
+		end
+	end
 end
 
 return EventDirector

@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Rules = require(ReplicatedStorage.Shared.Rules)
 local SpillService = require(script.Parent.SpillService)
 local EventDirector = require(script.Parent.EventDirector)
 local Payoff = require(script.Parent.Payoff)
@@ -23,6 +24,16 @@ local won = false
 local finalCleaned = false
 local finalCleaner: Player? = nil
 local skipTimer = false -- playtest helper: end the shift now
+local night = Config.DefaultNight -- which night the next shift plays (the shift board sets this)
+local modifiers: { string } = {}
+
+-- Publishes the upcoming night so the lobby, HUD and clock can show it.
+local function publishNight()
+	local r = Rules.Resolve(night, modifiers)
+	ReplicatedStorage:SetAttribute("Night", r.Night)
+	ReplicatedStorage:SetAttribute("NightName", r.Name)
+	ReplicatedStorage:SetAttribute("ShiftLength", r.ShiftLength)
+end
 
 local function setPhase(p: string)
 	ReplicatedStorage:SetAttribute("Phase", p)
@@ -83,7 +94,7 @@ local function runLobby()
 end
 
 -- Returns clean time in seconds, or nil if the clock ran out.
-local function runShift(): number?
+local function runShift(rules: Rules.Rules): number?
 	won, finalCleaned, finalCleaner, skipTimer = false, false, nil, false
 	for _, p in Players:GetPlayers() do
 		p:SetAttribute("Cleaned", 0)
@@ -98,13 +109,13 @@ local function runShift(): number?
 	for _, p in Players:GetPlayers() do
 		Mop.Give(p)
 	end
-	SpillService.StartRound(Config.SpillCount)
+	SpillService.StartRound(rules.SpillCount)
 	local start = now()
 	ReplicatedStorage:SetAttribute("ShiftStart", start)
-	ReplicatedStorage:SetAttribute("ShiftEndsAt", start + Config.ShiftLength)
-	EventDirector.Start()
+	ReplicatedStorage:SetAttribute("ShiftEndsAt", start + rules.ShiftLength)
+	EventDirector.Start(rules)
 
-	while not won and not skipTimer and now() < start + Config.ShiftLength do
+	while not won and not skipTimer and now() < start + rules.ShiftLength do
 		task.wait(0.1)
 	end
 	EventDirector.Stop()
@@ -122,7 +133,7 @@ local function runShift(): number?
 	return nil
 end
 
-local function runResults(cleanTime: number?)
+local function runResults(rules: Rules.Rules, cleanTime: number?)
 	local teamCleaned = 0
 	for _, p in Players:GetPlayers() do
 		teamCleaned += (p:GetAttribute("Cleaned") or 0) :: number
@@ -137,7 +148,7 @@ local function runResults(cleanTime: number?)
 				end
 			end)
 			task.spawn(Leaderboard.Submit, p.UserId, cleanTime)
-			if cleanTime < Config.PerfectShiftTime then
+			if cleanTime < rules.ShiftLength * Config.PerfectShiftFraction then
 				Badges.Award(p, "PerfectShift")
 			end
 		end
@@ -151,11 +162,24 @@ local function runResults(cleanTime: number?)
 			Best = p:GetAttribute("Best"),
 			NewBest = newBest,
 			TotalCleaned = p:GetAttribute("TotalCleaned") or 0,
+			Night = rules.Night,
+			NightName = rules.Name,
+			Tease = rules.Tease,
 		})
 	end
 	setPhase("Results")
 	task.wait(Config.ResultsTime)
 	task.spawn(Leaderboard.Refresh)
+end
+
+-- Chooses the night for the next shift (clamped to the nights that exist).
+function RoundManager.SetNight(n: number)
+	night = math.clamp(math.floor(n), 1, Rules.NightCount())
+	publishNight()
+end
+
+function RoundManager.GetNight(): number
+	return night
 end
 
 -- Playtest helpers (call from the server command bar while playing).
@@ -168,6 +192,7 @@ end
 
 function RoundManager.Init(s: Instance)
 	store = s
+	publishNight()
 	SpillService.OnCleaned = onCleaned
 	ReadyRemote.OnServerEvent:Connect(function()
 		if ReplicatedStorage:GetAttribute("Phase") == "Lobby" then
@@ -198,12 +223,14 @@ end
 function RoundManager.Run()
 	while true do
 		runLobby()
-		local ok, result = pcall(runShift)
+		local rules = Rules.Resolve(night, modifiers)
+		print(string.format("[Round] night %d: %s (%d spills, %ds)", rules.Night, rules.Name, rules.SpillCount, rules.ShiftLength))
+		local ok, result = pcall(runShift, rules)
 		if not ok then
 			warn("[Round] shift crashed:", result)
 			result = nil
 		end
-		runResults(result)
+		runResults(rules, result)
 	end
 end
 

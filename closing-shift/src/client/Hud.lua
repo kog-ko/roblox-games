@@ -160,9 +160,10 @@ function Hud.Start()
 		elseif phase == "Shift" then
 			local start = (ReplicatedStorage:GetAttribute("ShiftStart") or 0) :: number
 			local elapsed = workspace:GetServerTimeNow() - start
-			clockText.Text = Clock.Format(elapsed)
+			local length = (ReplicatedStorage:GetAttribute("ShiftLength") or 480) :: number
+			clockText.Text = Clock.Format(elapsed, length)
 			-- last hour: the clock pulses red
-			if elapsed > Config.ShiftLength * 0.75 then
+			if elapsed > length * 0.75 then
 				clockText.TextColor3 = INK:Lerp(RED, 0.5 + 0.5 * math.sin(os.clock() * 6))
 			else
 				clockText.TextColor3 = INK

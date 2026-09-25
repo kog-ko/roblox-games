@@ -1,12 +1,12 @@
 --!strict
--- Maps real shift seconds onto the in-game 2:00 AM -> 6:00 AM clock.
+-- Maps real shift seconds onto the in-game 2:00 AM -> 6:00 AM clock. Shift length is per night.
 local Config = require(script.Parent.Config)
 
 local Clock = {}
 
-function Clock.Format(elapsed: number): string
+function Clock.Format(elapsed: number, shiftLength: number): string
 	local span = (Config.ShiftEndHour - Config.ShiftStartHour) * 60
-	local gameMinutes = math.clamp(elapsed / Config.ShiftLength, 0, 1) * span
+	local gameMinutes = math.clamp(elapsed / shiftLength, 0, 1) * span
 	local total = Config.ShiftStartHour * 60 + math.floor(gameMinutes)
 	local h = total // 60
 	local m = total % 60

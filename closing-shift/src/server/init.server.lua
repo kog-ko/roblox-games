@@ -17,7 +17,8 @@ for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote",
 	end
 end
 
-local StoreBuilder = require(script.StoreBuilder)
+local Config = require(ReplicatedStorage.Shared.Config)
+local StoreBuilder = require(script:FindFirstChild(Config.Stores[Config.DefaultStore].Builder) :: ModuleScript)
 local store = workspace:FindFirstChild("Store")
 if not store then
 	store = StoreBuilder.Build()
@@ -59,6 +60,7 @@ if game:GetService("RunService"):IsStudio() then
 		Start = RoundManager.ForceStart,
 		Timeout = RoundManager.ForceTimeout,
 		Event = EventDirector.Force,
+		Night = RoundManager.SetNight, -- _G.ClosingShift.Night(2) plays night 2 next
 		CleanOne = function()
 			local p = Players:GetPlayers()[1]
 			return p and SpillService.DebugCleanOne(p)
