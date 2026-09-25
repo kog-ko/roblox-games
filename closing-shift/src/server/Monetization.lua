@@ -20,6 +20,7 @@ local Mop = require(script.Parent.Mop)
 local Manager = require(script.Parent.Manager)
 local ServerBoosts = require(script.Parent.ServerBoosts)
 local RoundManager = require(script.Parent.RoundManager)
+local Analytics = require(script.Parent.Analytics)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local RequestPurchase = Remotes:WaitForChild("RequestPurchase") :: RemoteEvent
@@ -156,6 +157,7 @@ function Monetization.OnShiftResult(player: Player, won: boolean)
 		task.delay(Config.ResultsTime * 0.5, function()
 			if player.Parent then
 				Offer:FireClient(player, "StarterPack")
+				Analytics.Event(player, "OfferShown", 1, "StarterPack")
 			end
 		end)
 	end

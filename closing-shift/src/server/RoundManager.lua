@@ -15,6 +15,7 @@ local Mop = require(script.Parent.Mop)
 local Manager = require(script.Parent.Manager)
 local Economy = require(script.Parent.Economy)
 local ServerBoosts = require(script.Parent.ServerBoosts)
+local Analytics = require(script.Parent.Analytics)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
@@ -80,6 +81,7 @@ local function onCleaned(player: Player, isFinal: boolean)
 	DataService.Update(player, function(p)
 		p.Stats.TotalCleaned += 1
 	end)
+	Analytics.Step(player, Analytics.Funnel.FirstSpill)
 	if isFinal then
 		finalCleaned = true
 		finalCleaner = player
@@ -141,6 +143,11 @@ local function runShift(rules: Rules.Rules): number?
 	setPhase("Shift")
 	for _, p in Players:GetPlayers() do
 		Mop.Give(p)
+		if rules.Night >= 3 then
+			Analytics.Step(p, Analytics.Funnel.ReachedNight3)
+		elseif rules.Night == 2 then
+			Analytics.Step(p, Analytics.Funnel.ReachedNight2)
+		end
 	end
 	SpillService.StartRound(rules.SpillCount)
 	revivedThisNight = false
@@ -207,6 +214,14 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 			end
 		end
 		Badges.Award(p, "FirstShift")
+		if cleanTime then
+			Analytics.Event(p, "ShiftCompleted", math.floor(cleanTime * 10 + 0.5) / 10, rules.Name, rules.Night)
+			if rules.Night == 1 then
+				Analytics.Step(p, Analytics.Funnel.FinishedNight1)
+			end
+		else
+			Analytics.Event(p, "ShiftFailed", (p:GetAttribute("Cleaned") or 0) :: number, rules.Name, rules.Night)
+		end
 		local pay = Economy.Paycheck(p, rules, cleanTime, finalCleaner == p)
 		if RoundManager.OnShiftResult then
 			task.spawn(RoundManager.OnShiftResult, p, cleanTime ~= nil)
@@ -241,6 +256,11 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 	local offer = cleanTime == nil and not revivedThisNight and Config.Monetization.Products.ClockInLate ~= 0
 	local window = Config.Monetization.Rewards.ClockInLateWindow
 	ReplicatedStorage:SetAttribute("ReviveOfferUntil", if offer then workspace:GetServerTimeNow() + window else nil)
+	if offer then
+		for _, p in Players:GetPlayers() do
+			Analytics.Event(p, "OfferShown", 1, "ClockInLate", rules.Night)
+		end
+	end
 	reviveRequested = false
 	local waitUntil = os.clock() + Config.ResultsTime
 	while os.clock() < waitUntil and not reviveRequested do
@@ -328,6 +348,10 @@ function RoundManager.Init(s: Instance)
 			prof.Stats.Catches += 1
 		end)
 		RoundManager.AddPenalty(Config.Manager.TimePenalty)
+		Analytics.Event(player, "ManagerCatch", 1, nil, night)
+		if Config.Monetization.Products.SecondChance ~= 0 then
+			Analytics.Event(player, "OfferShown", 1, "SecondChance", night)
+		end
 	end
 	Manager.OnUndoCatch = function(player: Player)
 		player:SetAttribute("CaughtThisShift", false)

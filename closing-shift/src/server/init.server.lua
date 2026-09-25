@@ -34,6 +34,7 @@ end
 local s = store :: Instance
 
 local DataService = require(script.DataService)
+local Analytics = require(script.Analytics)
 local Leaderboard = require(script.Leaderboard)
 local SpillService = require(script.SpillService)
 local EventDirector = require(script.EventDirector)
@@ -45,6 +46,15 @@ local Manager = require(script.Manager)
 local RoundManager = require(script.RoundManager)
 local ShiftBoard = require(script.ShiftBoard)
 
+-- analytics listens first so it sees every profile load; the cash and purchase hooks feed it
+Analytics.Init()
+Economy.OnCashChanged = Analytics.Cash
+Monetization.OnPromptShown = function(player, key)
+	Analytics.Event(player, "PromptShown", 1, key)
+end
+Monetization.OnPurchased = function(player, key)
+	Analytics.Event(player, "PromptBought", 1, key)
+end
 DataService.Init()
 Economy.Init(s)
 Leaderboard.Init(s)

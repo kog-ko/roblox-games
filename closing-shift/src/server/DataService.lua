@@ -17,7 +17,7 @@ export type Profile = {
 	Cash: number,
 	Unlocked: number,
 	BestByNight: { [string]: number }, -- night number as a string (DataStore-safe keys) -> seconds
-	Stats: { TotalCleaned: number, ShiftsWorked: number, ShiftsWon: number, Catches: number, LegacyBest: number? },
+	Stats: { TotalCleaned: number, ShiftsWorked: number, ShiftsWon: number, Catches: number, LegacyBest: number?, FunnelStep: number? },
 	Upgrades: { [string]: number }, -- upgrade id -> tier bought (0 = none)
 	CoffeeCredits: number,
 	Daily: { LastDay: number, Streak: number },
