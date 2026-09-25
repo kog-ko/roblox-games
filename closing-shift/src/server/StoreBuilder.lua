@@ -239,7 +239,7 @@ local function buildCounter(store: Instance)
 	label(surfaceGui(screen, Enum.NormalId.Left, 60), "$0.00", { TextColor3 = Color3.fromRGB(10, 40, 10) })
 	CollectionService:AddTag(screen, "PoweredNeon")
 	part({ Name = "CashDrawer", Size = Vector3.new(1.6, 0.4, 1.6), Position = Vector3.new(-20, 4, 12.5), Material = M.Metal, Color = Color3.fromRGB(30, 30, 30), Parent = reg })
-	-- back shelf behind the counter: cigarettes and cheap liquor
+	-- back shelf behind the counter: unlabeled packs and bottles
 	part({ Name = "BackShelf", Size = Vector3.new(1.5, 7, 12), Position = Vector3.new(-29.2, 3.5, 10), Material = M.WoodPlanks, Color = wood, Parent = c })
 	for row = 0, 2 do
 		for i = 0, 9 do
