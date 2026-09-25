@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local RequestPurchase = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestPurchase") :: RemoteEvent
 
 local Shop = {}
+Shop.Open = nil :: (() -> ())? -- set by Start
 local player = Players.LocalPlayer :: Player
 local MON = Config.Monetization
 local STUDIO = RunService:IsStudio()
@@ -257,6 +258,7 @@ function Shop.Start()
 		refresh()
 		gui.Enabled = true
 	end
+	Shop.Open = open -- the lobby place opens the shop from its own button
 
 	-- vending machine: any time
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)

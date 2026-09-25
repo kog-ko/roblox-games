@@ -16,10 +16,17 @@ local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local Economy = require(script.Parent.Economy)
-local Mop = require(script.Parent.Mop)
-local Manager = require(script.Parent.Manager)
-local ServerBoosts = require(script.Parent.ServerBoosts)
-local RoundManager = require(script.Parent.RoundManager)
+-- Shift-only modules. The lobby place runs this same file without them: nothing that needs a
+-- shift (boosts, Second Chance, Clock In Late) can be bought there.
+local function optional(name: string): any
+	local m = script.Parent:FindFirstChild(name)
+	return if m then require(m :: ModuleScript) else nil
+end
+local Mop = optional("Mop")
+local Manager = optional("Manager")
+local ServerBoosts = optional("ServerBoosts")
+local RoundManager = optional("RoundManager")
+local SHIFT_ONLY = { LightsOn = true, HireJanitor = true, SpillStorm = true, ManagerDayOff = true, SecondChance = true, ClockInLate = true }
 local Analytics = require(script.Parent.Analytics)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -79,7 +86,7 @@ local function applyPerks(player: Player)
 	player:SetAttribute("BigFlashlight", flash or nil)
 	player:SetAttribute("BeamMult", if flash then R.BigFlashlightBeam else nil)
 	Economy.ApplyUpgrades(player) -- battery stacks with the Big Flashlight
-	if mop and not hadMop and inShift() then
+	if mop and not hadMop and inShift() and Mop then
 		Mop.Give(player) -- swap to the gold one right away
 	end
 end
@@ -109,7 +116,9 @@ function Monetization.ApplyCoffee(player: Player): boolean
 	-- The client's Movement module reads CoffeeUntil and applies Config.CoffeeWalkSpeed.
 	player:SetAttribute("CoffeeUsed", true)
 	player:SetAttribute("CoffeeUntil", workspace:GetServerTimeNow() + Config.CoffeeDuration)
-	RoundManager.MarkAssisted()
+	if RoundManager then
+		RoundManager.MarkAssisted()
+	end
 	return true
 end
 
@@ -138,7 +147,9 @@ local function canRequest(player: Player, key: string, extra: any): (boolean, st
 	if not prof or prof.LoadFailed then
 		return false, "profile not loaded"
 	end
-	if ServerBoosts.IsBoost(key) then
+	if SHIFT_ONLY[key] and not RoundManager then
+		return false, "only during a shift"
+	elseif ServerBoosts and ServerBoosts.IsBoost(key) then
 		return ServerBoosts.CanOffer(key)
 	elseif key == "SecondChance" then
 		local at = player:GetAttribute("CaughtAt")
@@ -202,7 +213,7 @@ end
 local handlers: { [string]: (Player, any) -> boolean } = {}
 
 for key in MON.Products do
-	if ServerBoosts.IsBoost(key) then
+	if ServerBoosts and ServerBoosts.IsBoost(key) then
 		handlers[key] = function(player)
 			ServerBoosts.Grant(key, player)
 			return true
@@ -211,7 +222,7 @@ for key in MON.Products do
 end
 
 handlers.SecondChance = function(player)
-	if not Manager.UndoCatch(player, R.SecondChanceWindow + 10) then
+	if not (Manager and Manager.UndoCatch(player, R.SecondChanceWindow + 10)) then
 		-- too late to undo (the window closed while paying): bank a coffee instead
 		DataService.Update(player, function(p)
 			p.CoffeeCredits += 1
@@ -222,7 +233,7 @@ handlers.SecondChance = function(player)
 end
 
 handlers.ClockInLate = function(player)
-	if RoundManager.RequestRevive() then
+	if RoundManager and RoundManager.RequestRevive() then
 		Banner:FireAllClients(string.format("%s CLOCKED IN LATE! BACK TO WORK AT 5:00 AM", string.upper(player.DisplayName)), "ClockInLate")
 	else
 		-- someone else already revived, or the window closed while paying: pay it out as cash
@@ -320,7 +331,9 @@ end
 
 function Monetization.Init(s: Instance)
 	store = s
-	RoundManager.OnShiftResult = Monetization.OnShiftResult
+	if RoundManager then
+		RoundManager.OnShiftResult = Monetization.OnShiftResult
+	end
 	DataService.Loaded.Event:Connect(function(player: Player)
 		task.spawn(checkPasses, player)
 	end)

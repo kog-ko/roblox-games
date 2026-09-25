@@ -15,6 +15,7 @@ local ReadyUp = Remotes:WaitForChild("ReadyUp") :: RemoteEvent
 local RequestCoffee = Remotes:WaitForChild("RequestCoffee") :: RemoteEvent
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
 local ShowNote = Remotes:WaitForChild("ShowNote") :: RemoteEvent
+local ReturnToLobby = Remotes:WaitForChild("ReturnToLobby") :: RemoteEvent
 
 local Hud = {}
 local player = Players.LocalPlayer :: Player
@@ -94,6 +95,9 @@ function Hud.Start()
 	local rankText = text(lobby, "Rank", "TRAINEE", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 150), Color3.fromRGB(255, 215, 90))
 	local weekText = text(lobby, "Week", "", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 170))
 	-- inviting friends pays: +10% per friend in the server
+	-- back to the lobby place (only in the real shift place; Studio playtests have no lobby to go to)
+	local leaveBtn = button(gui, "Leave", "BACK TO LOBBY", UDim2.fromOffset(150, 40), UDim2.new(0, 12, 0.45, 50), Vector2.new(0, 0.5), Color3.fromRGB(150, 150, 140))
+	local inShiftPlace = game.PlaceId == Config.Places.Shift
 	local inviteBtn = button(gui, "Invite", "INVITE: +10% PAY", UDim2.fromOffset(150, 44), UDim2.new(0, 12, 0.45, 0), Vector2.new(0, 0.5), Color3.fromRGB(110, 160, 220))
 	local readyBtn = button(lobby, "Ready", "READY", UDim2.fromOffset(150, 50), UDim2.new(0.5, -6, 1, -10), Vector2.new(1, 1), Color3.fromRGB(120, 190, 110))
 
@@ -154,6 +158,7 @@ function Hud.Start()
 		local phase = ReplicatedStorage:GetAttribute("Phase")
 		lobby.Visible = phase == "Lobby"
 		inviteBtn.Visible = phase == "Lobby"
+		leaveBtn.Visible = inShiftPlace and (phase == "Lobby" or phase == "Results")
 		bar.Visible = phase == "Shift" or phase == "Payoff" or phase == "LightsOut"
 		if phase == "Lobby" then
 			results.Visible = false
@@ -213,6 +218,13 @@ function Hud.Start()
 	end)
 	coffeeBtn.Activated:Connect(function()
 		RequestCoffee:FireServer()
+	end)
+	leaveBtn.Activated:Connect(function()
+		leaveBtn.Text = "LEAVING..."
+		ReturnToLobby:FireServer()
+		task.delay(6, function()
+			leaveBtn.Text = "BACK TO LOBBY"
+		end)
 	end)
 	inviteBtn.Activated:Connect(function()
 		local ok, can = pcall(SocialService.CanSendGameInviteAsync, SocialService, player)

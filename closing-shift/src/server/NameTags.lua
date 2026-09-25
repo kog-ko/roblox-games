@@ -1,7 +1,8 @@
 --!strict
 -- The tag above every player's head: their career rank (from lifetime spills cleaned), gold for
 -- VIPs, and a trophy line for last week's top 3 Employees of the Week. Rebuilt whenever one of
--- those changes or the character respawns. Also publishes the rank index as the Rank attribute.
+-- those changes or the character respawns. Also publishes the rank index as the Rank attribute, and
+-- Rank + Cash as leaderstats so everyone's standing shows in the player list.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Progress = require(ReplicatedStorage.Shared.Progress)
@@ -28,10 +29,30 @@ local function line(parent: Instance, name: string, text: string, color: Color3,
 	t.Parent = parent
 end
 
+local function leaderstats(player: Player, rankName: string)
+	local ls = player:FindFirstChild("leaderstats")
+	if not ls then
+		ls = Instance.new("Folder")
+		ls.Name = "leaderstats"
+		local r = Instance.new("StringValue")
+		r.Name = "Rank"
+		r.Parent = ls
+		local c = Instance.new("IntValue")
+		c.Name = "Cash"
+		c.Parent = ls
+		ls.Parent = player
+	end
+	local rankValue = (ls :: Instance):FindFirstChild("Rank") :: StringValue
+	local cashValue = (ls :: Instance):FindFirstChild("Cash") :: IntValue
+	rankValue.Value = rankName
+	cashValue.Value = (player:GetAttribute("Cash") or 0) :: number
+end
+
 function NameTags.Refresh(player: Player)
 	local cleaned = (player:GetAttribute("TotalCleaned") or 0) :: number
 	local rankIndex, rankName = Progress.Rank(cleaned)
 	player:SetAttribute("Rank", rankIndex)
+	leaderstats(player, rankName)
 	local head = player.Character and player.Character:FindFirstChild("Head")
 	if not head then
 		return
@@ -88,6 +109,13 @@ function NameTags.Init()
 				NameTags.Refresh(player)
 			end)
 		end
+		player:GetAttributeChangedSignal("Cash"):Connect(function()
+			local ls = player:FindFirstChild("leaderstats")
+			local c = ls and ls:FindFirstChild("Cash")
+			if c then
+				(c :: IntValue).Value = (player:GetAttribute("Cash") or 0) :: number
+			end
+		end)
 		player.CharacterAdded:Connect(function(char)
 			char:WaitForChild("Head", 5)
 			NameTags.Refresh(player)

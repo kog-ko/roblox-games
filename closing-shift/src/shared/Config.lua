@@ -69,6 +69,8 @@ Config.LeaderboardRefresh = 60
 Config.BoardCycle = 12 -- seconds the counter board shows each page (Employee of the Week / fastest night)
 Config.WeeklyStoreName = "ClosingShift_WeeklySpills_v1" -- one OrderedDataStore per week (W<n> is added)
 Config.TrophyRefresh = 1800 -- how often a server re-reads last week's top 3
+Config.EarningsStoreName = "ClosingShift_Earnings_v1" -- lifetime cash earned on shifts (before pay multipliers)
+Config.CareerStoreName = "ClosingShift_Career_v1" -- lifetime spills cleaned
 Config.AutosaveInterval = 120
 Config.DataRetries = 3
 
@@ -182,5 +184,23 @@ Config.DevProducts = Config.Monetization.Products
 -- DataStore names (bump the version suffix to wipe test data)
 Config.DataStoreName = "ClosingShift_Players_v1"
 Config.LeaderboardStoreName = "ClosingShift_BestTimes_v1"
+
+
+-- Places. The lobby is the experience's start place; queues teleport each crew to its own private
+-- server of the shift place, and the Leave button brings them back.
+Config.Places = {
+	Lobby = 104809971812455,
+	Shift = 93047688567585,
+}
+
+-- Lobby queues: a pad per night plus Quick Play (the best night everyone on it has unlocked).
+Config.Queue = {
+	MaxCrew = 4, -- players per shift server
+	Countdown = 12, -- seconds after the first player steps on a pad
+	FullCountdown = 4, -- the countdown drops to this once the pad is full
+	RetryDelay = 5, -- after a failed teleport, players can queue again after this
+}
+-- Shift servers reached from a queue start once the whole crew has arrived (or after this long).
+Config.ArrivalWait = 20
 
 return Config

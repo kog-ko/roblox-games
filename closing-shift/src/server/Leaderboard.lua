@@ -147,6 +147,54 @@ function Leaderboard.Submit(night: number, userId: number, seconds: number)
 	end
 end
 
+-- Lifetime earnings (cash a shift paid before multipliers) and career spills, for the lobby boards.
+function Leaderboard.AddEarnings(player: Player, amount: number)
+	local ods = ordered(Config.EarningsStoreName)
+	if ods and amount > 0 then
+		local ok, err = pcall(ods.IncrementAsync, ods, tostring(player.UserId), math.floor(amount))
+		if not ok then
+			warn("[Leaderboard] earnings add failed:", err)
+		end
+	end
+end
+
+function Leaderboard.SetCareer(player: Player, totalCleaned: number)
+	local ods = ordered(Config.CareerStoreName)
+	if ods and totalCleaned > 0 then
+		local ok, err = pcall(ods.SetAsync, ods, tostring(player.UserId), math.floor(totalCleaned))
+		if not ok then
+			warn("[Leaderboard] career set failed:", err)
+		end
+	end
+end
+
+-- Top entries for a lobby board: kind = "weekly" | "night" (arg = night) | "earnings" | "career".
+-- Returns { { Name, Value } } best first, or nil if the board is unavailable.
+function Leaderboard.Entries(kind: string, arg: number?, size: number?): { { Name: string, UserId: number, Value: number } }?
+	local ods
+	local ascending = false
+	if kind == "weekly" then
+		ods = weekStore(Progress.Week())
+	elseif kind == "night" then
+		ods = nightStore(arg or 1)
+		ascending = true
+	elseif kind == "earnings" then
+		ods = ordered(Config.EarningsStoreName)
+	elseif kind == "career" then
+		ods = ordered(Config.CareerStoreName)
+	end
+	local entries = ods and top(ods, ascending, size or Config.LeaderboardSize)
+	if not entries then
+		return nil
+	end
+	local out = {}
+	for _, e in entries do
+		local uid = tonumber(e.key) or 0
+		table.insert(out, { Name = nameFor(uid), UserId = uid, Value = e.value })
+	end
+	return out
+end
+
 -- Adds spills to this week's count for a player; publishes their new total (WeeklyCleaned).
 function Leaderboard.AddWeekly(player: Player, spills: number)
 	if spills <= 0 then

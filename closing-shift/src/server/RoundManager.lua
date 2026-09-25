@@ -37,6 +37,11 @@ local revivedThisNight = false
 -- true once anything bought with Robux helped this night (a server boost, Second Chance, Clock In
 -- Late, coffee, the Industrial Mop): the clean time then isn't submitted to the fastest-shift board
 local assisted = false
+-- A private server made by a lobby queue (not one a player owns): the crew arrives by teleport
+-- with the night they queued for, and the first shift starts as soon as they're all here.
+local fromQueue = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
+local expectedCrew = 0
+local firstLobby = true
 local night = Config.DefaultNight -- which night the next shift plays (the shift board sets this)
 local modifiers: { string } = {}
 
@@ -118,14 +123,35 @@ local function runLobby()
 		end)
 	end
 	readyRequested = false
+	local intermission = Config.IntermissionTime
+	if fromQueue and firstLobby then
+		firstLobby = false
+		-- the crew is still teleporting in: wait for everyone (and their saves) before checking unlocks
+		local t = os.clock()
+		while os.clock() - t < Config.ArrivalWait do
+			local players = Players:GetPlayers()
+			local loaded = #players > 0
+			for _, p in players do
+				if type(p:GetAttribute("Unlocked")) ~= "number" then
+					loaded = false
+				end
+			end
+			if loaded and #players >= math.max(expectedCrew, 1) then
+				break
+			end
+			ReplicatedStorage:SetAttribute("Countdown", math.ceil(Config.ArrivalWait - (os.clock() - t)))
+			task.wait(0.2)
+		end
+		intermission = 5
+	end
 	if night > groupUnlocked() then
 		night = groupUnlocked()
 	end
 	publishNight()
-	local deadline = os.clock() + Config.IntermissionTime
+	local deadline = os.clock() + intermission
 	while true do
 		if #Players:GetPlayers() == 0 then
-			deadline = os.clock() + Config.IntermissionTime
+			deadline = os.clock() + intermission
 		elseif readyRequested or os.clock() >= deadline then
 			break
 		end
@@ -251,11 +277,15 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 			Analytics.Event(p, "ShiftFailed", (p:GetAttribute("Cleaned") or 0) :: number, rules.Name, rules.Night)
 		end
 		local pay = Economy.Paycheck(p, rules, cleanTime, finalCleaner == p)
+		task.spawn(Leaderboard.AddEarnings, p, pay.Earned)
 		if RoundManager.OnShiftResult then
 			task.spawn(RoundManager.OnShiftResult, p, cleanTime ~= nil)
 		end
 		task.spawn(DataService.Save, p)
 		local prof = DataService.Get(p)
+		if prof then
+			task.spawn(Leaderboard.SetCareer, p, prof.Stats.TotalCleaned)
+		end
 		ResultsRemote:FireClient(p, {
 			Outcome = if cleanTime then "Clean" else "Fired",
 			CleanTime = cleanTime,
@@ -415,6 +445,17 @@ function RoundManager.Init(s: Instance)
 		end
 	end
 	local function onPlayer(player: Player)
+		-- arriving from a lobby queue: { Night = n, Crew = players in the queue }
+		local data = player:GetJoinData().TeleportData
+		if type(data) == "table" then
+			if type(data.Night) == "number" and firstLobby then
+				night = math.clamp(math.floor(data.Night), 1, Rules.NightCount())
+				publishNight()
+			end
+			if type(data.Crew) == "number" then
+				expectedCrew = math.max(expectedCrew, math.clamp(math.floor(data.Crew), 1, Config.Queue.MaxCrew))
+			end
+		end
 		player:GetAttributeChangedSignal("Unlocked"):Connect(publishNight)
 		player:SetAttribute("Cleaned", 0)
 		player.CameraMode = Enum.CameraMode.LockFirstPerson

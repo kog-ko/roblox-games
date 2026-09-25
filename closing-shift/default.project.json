@@ -21,6 +21,7 @@
         "RequestPurchase": { "$className": "RemoteEvent" },
         "Banner": { "$className": "RemoteEvent" },
         "Offer": { "$className": "RemoteEvent" },
+        "ReturnToLobby": { "$className": "RemoteEvent" },
         "ViewReport": { "$className": "UnreliableRemoteEvent" }
       }
     },

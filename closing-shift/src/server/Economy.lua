@@ -121,7 +121,7 @@ function Economy.ClaimDaily(player: Player): (number, number)
 	return bonus, streak
 end
 
-export type Paycheck = { Lines: { { Label: string, Amount: number } }, Multiplier: number, Total: number }
+export type Paycheck = { Lines: { { Label: string, Amount: number } }, Multiplier: number, Total: number, Earned: number }
 
 -- Works out and pays this player's paycheck for a shift. Returns the breakdown for the results screen.
 function Economy.Paycheck(player: Player, rules: any, cleanTime: number?, finalCleaner: boolean): Paycheck
@@ -152,6 +152,7 @@ function Economy.Paycheck(player: Player, rules: any, cleanTime: number?, finalC
 	if friends > 0 then
 		add(string.format("CREW BONUS (%d FRIEND%s)", friends, if friends > 1 then "S" else ""), math.floor(base * P.CrewBonusPerFriend * friends))
 	end
+	local earned = base -- what the shift itself paid, before VIP / Starter Pack multipliers
 	local mult = Economy.PayMultiplier(player)
 	local total = math.floor(base * mult)
 	Economy.AddCash(player, total, "Paycheck")
@@ -161,7 +162,7 @@ function Economy.Paycheck(player: Player, rules: any, cleanTime: number?, finalC
 		table.insert(lines, { Label = string.format("DAILY BONUS (DAY %d)", streak), Amount = daily })
 		total += daily
 	end
-	return { Lines = lines, Multiplier = mult, Total = total }
+	return { Lines = lines, Multiplier = mult, Total = total, Earned = earned }
 end
 
 local function buy(player: Player, id: any)

@@ -9,7 +9,7 @@ if not remotes then
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
 end
-for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight", "Caught", "BuyUpgrade", "RequestPurchase", "Banner", "Offer" } do
+for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight", "Caught", "BuyUpgrade", "RequestPurchase", "Banner", "Offer", "ReturnToLobby" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name
@@ -102,6 +102,24 @@ end)
 game:GetService("Players").PlayerRemoving:Connect(function(player)
 	lastToggle[player] = nil
 	pendingToggle[player] = nil
+end)
+
+-- Back to the lobby place (the Leave button). Only in the real shift place; Studio can't teleport.
+local TeleportService = game:GetService("TeleportService")
+local lastLeave: { [Player]: number } = {}
+local returnRemote = (remotes :: Instance):WaitForChild("ReturnToLobby") :: RemoteEvent
+returnRemote.OnServerEvent:Connect(function(player)
+	if game.PlaceId ~= Config.Places.Shift or os.clock() - (lastLeave[player] or 0) < 3 then
+		return
+	end
+	lastLeave[player] = os.clock()
+	local ok, err = pcall(TeleportService.TeleportAsync, TeleportService, Config.Places.Lobby, { player })
+	if not ok then
+		warn("[Teleport] back to lobby failed:", err)
+	end
+end)
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+	lastLeave[player] = nil
 end)
 
 -- Studio-only playtest commands. From the server command bar while playing, e.g.:

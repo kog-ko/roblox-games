@@ -1,0 +1,33 @@
+{
+  "name": "ClosingShiftLobby",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/lobby/server",
+        "DataService": { "$path": "src/server/DataService.lua" },
+        "Economy": { "$path": "src/server/Economy.lua" },
+        "Monetization": { "$path": "src/server/Monetization.lua" },
+        "Analytics": { "$path": "src/server/Analytics.lua" },
+        "NameTags": { "$path": "src/server/NameTags.lua" },
+        "Leaderboard": { "$path": "src/server/Leaderboard.lua" }
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/lobby/client",
+          "Overlay": { "$path": "src/client/Overlay.lua" },
+          "Offers": { "$path": "src/client/Offers.lua" },
+          "Locker": { "$path": "src/client/Locker.lua" },
+          "Shop": { "$path": "src/client/Shop.lua" }
+        }
+      }
+    }
+  }
+}
