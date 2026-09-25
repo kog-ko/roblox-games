@@ -17,6 +17,7 @@
         "Cleaned": { "$className": "RemoteEvent" },
         "PickNight": { "$className": "RemoteEvent" },
         "Caught": { "$className": "RemoteEvent" },
+        "BuyUpgrade": { "$className": "RemoteEvent" },
         "ViewReport": { "$className": "UnreliableRemoteEvent" }
       }
     },

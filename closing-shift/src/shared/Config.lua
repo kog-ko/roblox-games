@@ -89,6 +89,21 @@ Config.PSX = {
 	FogHaze = 3,
 }
 
+-- Paycheck (cash). Win bonuses are per night (Data/Nights WinBonus).
+Config.Pay = {
+	PerSpill = 10, -- every spill you clean
+	FinalSpill = 25, -- extra for the back-room spill
+	FastFraction = 0.5, -- a win in under this fraction of the night's clock...
+	FastBonus = 50, -- ...pays this bonus
+	NoCatchBonus = 30, -- won a night that has the Manager without being caught
+}
+
+-- Daily Shift Bonus: paid on your first shift each (UTC) day; grows on consecutive days.
+Config.Daily = {
+	PerStreakDay = 25, -- bonus = streak x this
+	MaxStreak = 7, -- the streak (and bonus) stops growing here
+}
+
 -- The Night Manager (speed is per night in Data/Nights)
 Config.Manager = {
 	CatchDistance = 3.5, -- studs (flat) that count as caught
@@ -102,6 +117,8 @@ Config.Manager = {
 	TimePenalty = 30, -- seconds taken off the shift clock per catch
 	CooldownAfterCatch = 4, -- he waits this long in the back room after a catch
 	Spawn = Vector3.new(44, 0, -7), -- back room, by the door
+	SpeedPerExtraPlayer = 0.15, -- +15% speed for each player beyond the first (co-op always has a watcher)
+	SoundRange = 25, -- studs at which his footsteps and hum fade out
 }
 
 -- Flashlight (F / touch). Battery drains while on and slowly recharges while off.
@@ -133,6 +150,8 @@ Config.Sounds = {
 	StingPayoff = id(9047014318), -- back-room reveal
 	StingFired = id(1846887425), -- YOU'RE FIRED
 	UIClick = id(87437544236708), -- button presses
+	ManagerSteps = id(117471457171581), -- the Night Manager walking (only while he moves)
+	ManagerPresence = id(9112797020), -- low hum around the Night Manager
 }
 Config.ScrubLoop = NumberRange.new(1, 3) -- seconds of the scrub clip looped while mopping
 Config.PitchVariation = 0.08 -- every one-shot plays at 1 +/- this speed so repeats don't sound robotic

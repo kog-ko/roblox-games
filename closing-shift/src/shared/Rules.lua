@@ -15,6 +15,7 @@ export type Rules = {
 	Store: string,
 	Tutorial: boolean,
 	Tease: string,
+	WinBonus: number,
 	WalkSpeedMult: number,
 	Modifiers: { string },
 }
@@ -39,6 +40,7 @@ function Rules.Resolve(night: number, modifiers: { string }?): Rules
 		Store = n.Store,
 		Tutorial = n.Tutorial == true,
 		Tease = n.Tease or "",
+		WinBonus = n.WinBonus or 0,
 		WalkSpeedMult = 1,
 		Modifiers = {},
 	}

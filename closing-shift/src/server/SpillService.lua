@@ -52,6 +52,7 @@ end
 
 local function holdTime(player: Player): number
 	local mult = if player:GetAttribute("IndustrialMop") then 1 - Config.IndustrialMopSpeedup else 1
+	mult *= (player:GetAttribute("CleanTimeMult") or 1) :: number -- Mop Speed upgrade
 	return Config.CleanHoldTime * mult
 end
 

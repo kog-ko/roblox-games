@@ -13,6 +13,7 @@ local Leaderboard = require(script.Parent.Leaderboard)
 local Badges = require(script.Parent.Badges)
 local Mop = require(script.Parent.Mop)
 local Manager = require(script.Parent.Manager)
+local Economy = require(script.Parent.Economy)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
@@ -72,7 +73,7 @@ end
 local function onCleaned(player: Player, isFinal: boolean)
 	player:SetAttribute("Cleaned", ((player:GetAttribute("Cleaned") or 0) :: number) + 1)
 	DataService.Update(player, function(p)
-		p.TotalCleaned += 1
+		p.Stats.TotalCleaned += 1
 	end)
 	if isFinal then
 		finalCleaned = true
@@ -123,6 +124,7 @@ local function runShift(rules: Rules.Rules): number?
 	for _, p in Players:GetPlayers() do
 		p:SetAttribute("Cleaned", 0)
 		p:SetAttribute("CoffeeUsed", false)
+		p:SetAttribute("CaughtThisShift", false)
 		p:SetAttribute("CoffeeUntil", nil)
 		local char = p.Character
 		if char then
@@ -166,38 +168,46 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 		teamCleaned += (p:GetAttribute("Cleaned") or 0) :: number
 	end
 	local final = cleanTime ~= nil and rules.Night >= Rules.NightCount()
+	local key = tostring(rules.Night)
 	for _, p in Players:GetPlayers() do
 		local newBest = false
-		if cleanTime then
-			-- beating a night unlocks the next one
-			DataService.Update(p, function(prof)
+		DataService.Update(p, function(prof)
+			prof.Stats.ShiftsWorked += 1
+			if cleanTime then
+				prof.Stats.ShiftsWon += 1
+				-- beating a night unlocks the next one
 				prof.Unlocked = math.max(prof.Unlocked, math.min(rules.Night + 1, Rules.NightCount()))
-			end)
-			DataService.Update(p, function(prof)
-				if prof.Best == nil or cleanTime < (prof.Best :: number) then
-					prof.Best = cleanTime
+				local best = prof.BestByNight[key]
+				if best == nil or cleanTime < best then
+					prof.BestByNight[key] = cleanTime
 					newBest = true
 				end
-			end)
-			task.spawn(Leaderboard.Submit, p.UserId, cleanTime)
+			end
+		end)
+		if cleanTime then
+			task.spawn(Leaderboard.Submit, rules.Night, p.UserId, cleanTime)
 			if cleanTime < rules.ShiftLength * Config.PerfectShiftFraction then
 				Badges.Award(p, "PerfectShift")
 			end
 		end
 		Badges.Award(p, "FirstShift")
+		local pay = Economy.Paycheck(p, rules, cleanTime, finalCleaner == p)
 		task.spawn(DataService.Save, p)
+		local prof = DataService.Get(p)
 		ResultsRemote:FireClient(p, {
 			Outcome = if cleanTime then "Clean" else "Fired",
 			CleanTime = cleanTime,
 			Cleaned = p:GetAttribute("Cleaned") or 0,
 			TeamCleaned = teamCleaned,
-			Best = p:GetAttribute("Best"),
+			Best = prof and prof.BestByNight[key],
 			NewBest = newBest,
-			TotalCleaned = p:GetAttribute("TotalCleaned") or 0,
+			TotalCleaned = prof and prof.Stats.TotalCleaned or 0,
 			Night = rules.Night,
 			NightName = rules.Name,
 			Tease = rules.Tease,
 			Final = final,
+			Pay = pay,
+			Cash = prof and prof.Cash or 0,
 		})
 	end
 	-- a win moves the party on to the next night (if everyone has it); a loss replays this one
@@ -209,7 +219,7 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 	publishNight()
 	setPhase("Results")
 	task.wait(Config.ResultsTime)
-	task.spawn(Leaderboard.Refresh)
+	task.spawn(Leaderboard.Refresh, night)
 end
 
 -- Chooses the night for the next shift (clamped to the nights that exist).
@@ -247,7 +257,11 @@ end
 function RoundManager.Init(s: Instance)
 	store = s
 	publishNight()
-	Manager.OnCatch = function()
+	Manager.OnCatch = function(player: Player)
+		player:SetAttribute("CaughtThisShift", true)
+		DataService.Update(player, function(prof)
+			prof.Stats.Catches += 1
+		end)
 		RoundManager.AddPenalty(Config.Manager.TimePenalty)
 	end
 	SpillService.OnCleaned = onCleaned

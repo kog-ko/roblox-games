@@ -31,6 +31,7 @@ local waypoints: { Vector3 } = {}
 local cooldownUntil = 0
 local watchedBy: { string } = {}
 local isWatched = false
+local walking = false
 local sinceCheck = math.huge -- sight checks run ~10x a second, movement every frame
 
 local HEIGHT = 8.4
@@ -66,6 +67,26 @@ local function build(): Model
 	block("Neck", Vector3.new(0.5, 0.35, 0.5), Vector3.new(0, 6.65, 0), skin)
 	block("Head", Vector3.new(1.3, 1.5, 1.3), Vector3.new(0, 7.6, 0), skin) -- no face, on purpose
 	m.PrimaryPart = root
+	-- he's heard before he's seen: footsteps only while he moves, and a low hum around him
+	local steps = Instance.new("Sound")
+	steps.Name = "Steps"
+	steps.SoundId = Config.Sounds.ManagerSteps
+	steps.Looped = true
+	steps.Volume = 0.9
+	steps.PlaybackSpeed = 0.85
+	steps.RollOffMaxDistance = C.SoundRange
+	steps.RollOffMinDistance = 4
+	steps.Parent = root
+	local hum = Instance.new("Sound")
+	hum.Name = "Presence"
+	hum.SoundId = Config.Sounds.ManagerPresence
+	hum.Looped = true
+	hum.Volume = 0.6
+	hum.PlaybackSpeed = 0.8
+	hum.RollOffMaxDistance = C.SoundRange * 0.9
+	hum.RollOffMinDistance = 3
+	hum.Parent = root
+	hum:Play()
 	return m
 end
 
@@ -215,12 +236,21 @@ local function step(dt: number)
 		isWatched = watched()
 		m:SetAttribute("Watched", isWatched)
 	end
-	if isWatched or os.clock() < cooldownUntil then
+	local canMove = not isWatched and os.clock() >= cooldownUntil and #waypoints > 0
+	if canMove ~= walking then
+		walking = canMove
+		local steps = m.PrimaryPart and m.PrimaryPart:FindFirstChild("Steps") :: Sound?
+		if steps then
+			steps.Playing = canMove
+		end
+	end
+	if not canMove then
 		return
 	end
 	local cf = pivot()
 	local pos = cf.Position
-	local budget = speed * dt
+	local extra = math.max(0, #Players:GetPlayers() - 1)
+	local budget = speed * (1 + C.SpeedPerExtraPlayer * extra) * dt
 	while budget > 0 and #waypoints > 0 do
 		local target = waypoints[1]
 		local to = Vector3.new(target.X - pos.X, 0, target.Z - pos.Z)
@@ -260,6 +290,7 @@ function Manager.Start(rules: any)
 	speed = rules.Manager.Speed
 	cooldownUntil = os.clock() + 5 -- a few seconds' grace at the start of the shift
 	isWatched = false
+	walking = false
 	sinceCheck = math.huge
 	local m = build()
 	m:PivotTo(CFrame.new(C.Spawn))

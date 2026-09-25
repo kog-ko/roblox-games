@@ -19,6 +19,7 @@ local function apply(prompt: Instance)
 	if prompt:IsA("ProximityPrompt") then
 		prompt.Enabled = holdingMop()
 		local mult = if player:GetAttribute("IndustrialMop") then 1 - Config.IndustrialMopSpeedup else 1
+		mult *= (player:GetAttribute("CleanTimeMult") or 1) :: number
 		prompt.HoldDuration = Config.CleanHoldTime * mult
 	end
 end
@@ -66,6 +67,7 @@ function Prompts.Start()
 	bindCleanButton()
 	CollectionService:GetInstanceAddedSignal("SpillPrompt"):Connect(apply)
 	player:GetAttributeChangedSignal("IndustrialMop"):Connect(refresh)
+	player:GetAttributeChangedSignal("CleanTimeMult"):Connect(refresh)
 	local function hook(char: Model)
 		char.ChildAdded:Connect(refresh)
 		char.ChildRemoved:Connect(refresh)

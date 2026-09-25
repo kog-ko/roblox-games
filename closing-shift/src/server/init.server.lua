@@ -9,7 +9,7 @@ if not remotes then
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
 end
-for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight", "Caught" } do
+for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight", "Caught", "BuyUpgrade" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name
@@ -38,12 +38,14 @@ local Leaderboard = require(script.Leaderboard)
 local SpillService = require(script.SpillService)
 local EventDirector = require(script.EventDirector)
 local Payoff = require(script.Payoff)
+local Economy = require(script.Economy)
 local Monetization = require(script.Monetization)
 local Manager = require(script.Manager)
 local RoundManager = require(script.RoundManager)
 local ShiftBoard = require(script.ShiftBoard)
 
 DataService.Init()
+Economy.Init(s)
 Leaderboard.Init(s)
 SpillService.Init(s)
 EventDirector.Init(s)

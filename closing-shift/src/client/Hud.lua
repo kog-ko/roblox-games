@@ -76,6 +76,10 @@ function Hud.Start()
 	local mineBox = box(bar, "Mine", UDim2.fromOffset(170, 38), UDim2.new(0, 12, 0, 102), Vector2.zero)
 	local mineText = text(mineBox, "Text", "YOU 0")
 	local boostText = text(bar, "Boost", "", UDim2.fromOffset(170, 26), UDim2.new(0, 12, 0, 146), Color3.fromRGB(230, 180, 110))
+
+	-- Cash, always visible (top right)
+	local cashBox = box(gui, "Cash", UDim2.fromOffset(150, 38), UDim2.new(1, -12, 0, 60), Vector2.new(1, 0))
+	local cashText = text(cashBox, "Text", "$0", nil, nil, Color3.fromRGB(255, 215, 90))
 	local coffeeBtn = button(bar, "Coffee", "COFFEE", UDim2.fromOffset(130, 46), UDim2.new(1, -12, 0.42, 0), Vector2.new(1, 0.5), Color3.fromRGB(190, 140, 80))
 
 	-- Lobby panel
@@ -89,7 +93,7 @@ function Hud.Start()
 	local mopBtn = button(lobby, "GoldMop", "GOLD MOP", UDim2.fromOffset(150, 50), UDim2.new(0.5, 6, 1, -10), Vector2.new(0, 1), Color3.fromRGB(215, 180, 70))
 
 	-- Results
-	local results = box(gui, "Results", UDim2.fromOffset(460, 330), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+	local results = box(gui, "Results", UDim2.fromOffset(460, 420), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
 	local resTitle = text(results, "Title", "", UDim2.new(1, -20, 0, 70), UDim2.fromOffset(10, 10))
 	local resBody = text(results, "Body", "", UDim2.new(1, -30, 1, -100), UDim2.fromOffset(15, 90))
 	resBody.TextXAlignment = Enum.TextXAlignment.Left
@@ -122,6 +126,7 @@ function Hud.Start()
 	local function refreshCounts()
 		spillText.Text = "SPILLS " .. tostring(ReplicatedStorage:GetAttribute("SpillsRemaining") or 0)
 		mineText.Text = "YOU " .. tostring(player:GetAttribute("Cleaned") or 0)
+		cashText.Text = "$" .. tostring(player:GetAttribute("Cash") or 0)
 		local best = player:GetAttribute("Best")
 		bestText.Text = if type(best) == "number" then "BEST: " .. Clock.Duration(best) else "BEST: --"
 		local passId = Config.GamePasses.IndustrialMop
@@ -225,6 +230,14 @@ function Hud.Start()
 			resBody.Text = string.format("CLEAN TIME   %s%s\nBEST         %s\n\nYOU CLEANED  %d\nTEAM CLEANED %d\nLIFETIME     %d",
 				Clock.Duration(r.CleanTime), if r.NewBest then "  NEW BEST!" else "",
 				if r.Best then Clock.Duration(r.Best) else "--", r.Cleaned, r.TeamCleaned, r.TotalCleaned)
+		end
+		if type(r.Pay) == "table" and type(r.Pay.Lines) == "table" then
+			local lines = {}
+			for _, l in r.Pay.Lines do
+				table.insert(lines, string.format("%-20s +$%d", l.Label, l.Amount))
+			end
+			local mult = if (r.Pay.Multiplier or 1) > 1 then string.format("  (x%d)", r.Pay.Multiplier) else ""
+			resBody.Text ..= "\n\nPAYCHECK\n" .. table.concat(lines, "\n") .. string.format("\nTOTAL  +$%d%s", r.Pay.Total, mult)
 		end
 		if r.Final then
 			resBody.Text ..= string.format("\n\nNIGHTS 4-5 COMING SOON.\nLIKE THE GAME TO UNLOCK THEM FASTER!\nLIKE GOAL: %s", tostring(Config.LikeGoal))

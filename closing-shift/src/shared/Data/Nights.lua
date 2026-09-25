@@ -12,6 +12,7 @@
 --   Store        which store layout to use (Data/Stores)
 --   Tutorial     show the on-screen tutorial hints
 --   Tease        line shown on the results screen, hinting at the next night
+--   WinBonus     paycheck bonus for clearing the night
 local Nights = {
 	{
 		Name = "Orientation",
@@ -24,6 +25,7 @@ local Nights = {
 		Store = "QuikStop",
 		Tutorial = true,
 		Tease = "Tomorrow night, management is coming in.",
+		WinBonus = 40,
 	},
 	{
 		Name = "Management",
@@ -36,6 +38,7 @@ local Nights = {
 		Store = "QuikStop",
 		Tutorial = false,
 		Tease = "The breaker's been acting up. Bring a flashlight.",
+		WinBonus = 80,
 	},
 	{
 		Name = "Brownout",
@@ -48,6 +51,7 @@ local Nights = {
 		Store = "QuikStop",
 		Tutorial = false,
 		Tease = "NIGHTS 4-5 COMING SOON.",
+		WinBonus = 120,
 	},
 }
 

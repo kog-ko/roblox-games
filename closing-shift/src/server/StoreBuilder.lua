@@ -506,13 +506,19 @@ local function buildHallway(store: Instance)
 	local wall = Color3.fromRGB(140, 150, 145)
 	part({ Name = "Floor", Size = Vector3.new(15, 1, 8), Position = Vector3.new(-38, -0.5, -13), Material = M.CeramicTiles, Color = Color3.fromRGB(170, 175, 170), Parent = hall })
 	part({ Name = "Ceiling", Size = Vector3.new(15, 1, 8), Position = Vector3.new(-38, H + 0.5, -13), Material = M.Plaster, Color = Color3.fromRGB(100, 102, 98), Parent = hall })
-	part({ Name = "NorthWall", Size = Vector3.new(15, H, 1), Position = Vector3.new(-38, H / 2, -8.5), Material = M.Plaster, Color = wall, Parent = hall })
+	-- north wall has the doorway into the break room (x -41..-37, 7 high)
+	part({ Name = "NorthWallA", Size = Vector3.new(4.5, H, 1), Position = Vector3.new(-43.25, H / 2, -8.5), Material = M.Plaster, Color = wall, Parent = hall })
+	part({ Name = "NorthWallB", Size = Vector3.new(6.5, H, 1), Position = Vector3.new(-33.75, H / 2, -8.5), Material = M.Plaster, Color = wall, Parent = hall })
+	part({ Name = "NorthWallTop", Size = Vector3.new(4, H - 7, 1), Position = Vector3.new(-39, 7 + (H - 7) / 2, -8.5), Material = M.Plaster, Color = wall, Parent = hall })
 	part({ Name = "SouthWall", Size = Vector3.new(15, H, 1), Position = Vector3.new(-38, H / 2, -17.5), Material = M.Plaster, Color = wall, Parent = hall })
 	part({ Name = "EndWall", Size = Vector3.new(1, H, 8), Position = Vector3.new(-45.5, H / 2, -13), Material = M.Plaster, Color = wall, Parent = hall })
 	-- tiled wainscot on both long walls
-	for _, z in { -9.05, -16.95 } do
-		part({ Name = "Wainscot", Size = Vector3.new(14, 3.5, 0.1), Position = Vector3.new(-38, 1.75, z), Material = M.CeramicTiles, Color = Color3.fromRGB(120, 150, 150), CanCollide = false, Parent = hall })
+	part({ Name = "Wainscot", Size = Vector3.new(14, 3.5, 0.1), Position = Vector3.new(-38, 1.75, -16.95), Material = M.CeramicTiles, Color = Color3.fromRGB(120, 150, 150), CanCollide = false, Parent = hall })
+	for _, seg in { { -43.25, 4 }, { -34, 6 } } do
+		part({ Name = "Wainscot", Size = Vector3.new(seg[2], 3.5, 0.1), Position = Vector3.new(seg[1], 1.75, -9.05), Material = M.CeramicTiles, Color = Color3.fromRGB(120, 150, 150), CanCollide = false, Parent = hall })
 	end
+	local bsign = part({ Name = "BreakRoomSign", Size = Vector3.new(3.6, 0.8, 0.05), Position = Vector3.new(-39, 7.6, -9.03), Color = Color3.fromRGB(230, 230, 220), CanCollide = false, Parent = hall })
+	label(surfaceGui(bsign, Enum.NormalId.Back, 50), "BREAK ROOM", { TextColor3 = Color3.fromRGB(40, 40, 60) })
 	-- restroom doors
 	for _, d in { { -35, "MEN" }, { -40.5, "WOMEN" } } do
 		part({ Name = "Door", Size = Vector3.new(3.2, 7, 0.3), Position = Vector3.new(d[1], 3.5, -16.85), Material = M.Wood, Color = Color3.fromRGB(70, 90, 110), Parent = hall })
@@ -524,11 +530,62 @@ local function buildHallway(store: Instance)
 	local janitor = part({ Name = "JanitorDoor", Size = Vector3.new(0.3, 7, 3), CFrame = CFrame.new(-44.2, 3.5, -12.2) * CFrame.Angles(0, math.rad(-25), 0), Material = M.Wood, Color = Color3.fromRGB(95, 85, 70), Parent = hall })
 	label(surfaceGui(janitor, Enum.NormalId.Right, 40), "JANITOR", { Size = UDim2.fromScale(1, 0.12), TextColor3 = Color3.fromRGB(200, 190, 160) })
 	-- water fountain
-	part({ Name = "Fountain", Size = Vector3.new(1.6, 1, 1.2), Position = Vector3.new(-38, 3, -9.4), Material = M.Metal, Color = STEEL, Parent = hall })
+	part({ Name = "Fountain", Size = Vector3.new(1.6, 1, 1.2), Position = Vector3.new(-33, 3, -9.4), Material = M.Metal, Color = STEEL, Parent = hall })
 	-- flickery light and a sign pointing the way
 	tube(hall, "HallTube", Vector3.new(-38, H - 0.3, -13), 6, "FluorescentTube", true)
 	local arrow = part({ Name = "RestroomSign", Size = Vector3.new(0.2, 1, 4), Position = Vector3.new(-29.9, 10, -13), Color = Color3.fromRGB(230, 230, 220), CanCollide = false, Parent = hall })
 	label(surfaceGui(arrow, Enum.NormalId.Right, 40), "< RESTROOMS", { TextColor3 = Color3.fromRGB(40, 40, 60) })
+end
+
+-- Break room behind the restroom hallway: your locker (upgrades), the vending machine (shop) and the
+-- VIP lounge door. Somewhere to spend your paycheck between shifts.
+local function buildBreakRoom(store: Instance)
+	local b = model("BreakRoom", store)
+	local H = 10
+	local wall = Color3.fromRGB(150, 145, 125)
+	part({ Name = "Floor", Size = Vector3.new(15, 1, 15), Position = Vector3.new(-38, -0.5, -1), Material = M.CeramicTiles, Color = Color3.fromRGB(160, 150, 130), Parent = b })
+	part({ Name = "Ceiling", Size = Vector3.new(15, 1, 15), Position = Vector3.new(-38, H + 0.5, -1), Material = M.Plaster, Color = Color3.fromRGB(105, 100, 92), Parent = b })
+	part({ Name = "WestWall", Size = Vector3.new(1, H, 15), Position = Vector3.new(-46, H / 2, -1), Material = M.Plaster, Color = wall, Parent = b })
+	part({ Name = "NorthWall", Size = Vector3.new(16, H, 1), Position = Vector3.new(-38, H / 2, 7), Material = M.Plaster, Color = wall, Parent = b })
+	part({ Name = "EastWall", Size = Vector3.new(0.5, H, 15), Position = Vector3.new(-31.25, H / 2, -1), Material = M.Plaster, Color = wall, Parent = b })
+	-- lockers down the west wall; yours is marked
+	for i = 0, 5 do
+		local z = -6.5 + i * 1.9
+		local mine = i == 2
+		local l = part({
+			Name = if mine then "MyLocker" else "Locker", Size = Vector3.new(1.3, 7, 1.8), Position = Vector3.new(-44.85, 3.5, z),
+			Material = M.Metal, Color = if mine then Color3.fromRGB(90, 120, 150) else Color3.fromRGB(95, 105, 115), Parent = b,
+		})
+		for v = 0, 2 do
+			part({ Name = "Vent", Size = Vector3.new(0.05, 0.08, 1.2), Position = Vector3.new(-44.18, 6.2 - v * 0.25, z), Color = Color3.fromRGB(40, 45, 50), CanCollide = false, Parent = b })
+		end
+		if mine then
+			local plate = part({ Name = "NamePlate", Size = Vector3.new(0.05, 0.6, 1.4), Position = Vector3.new(-44.17, 5.2, z), Color = Color3.fromRGB(235, 225, 170), CanCollide = false, Parent = b })
+			label(surfaceGui(plate, Enum.NormalId.Right, 60), "YOUR LOCKER", { TextColor3 = Color3.fromRGB(40, 40, 30) })
+		end
+	end
+	-- table and chairs
+	part({ Name = "Table", Size = Vector3.new(4, 0.3, 3), Position = Vector3.new(-37.5, 2.6, -2), Material = M.WoodPlanks, Color = Color3.fromRGB(150, 120, 85), Parent = b })
+	part({ Name = "TableLeg", Size = Vector3.new(0.4, 2.5, 0.4), Position = Vector3.new(-37.5, 1.25, -2), Material = M.Metal, Color = DARK_STEEL, Parent = b })
+	for _, off in { Vector3.new(-2.6, 0, 0), Vector3.new(2.6, 0, 0), Vector3.new(0, 0, 2.2), Vector3.new(0, 0, -2.2) } do
+		part({ Name = "Chair", Size = Vector3.new(1.4, 1.6, 1.4), Position = Vector3.new(-37.5, 0.8, -2) + off, Material = M.Plastic, Color = Color3.fromRGB(170, 70, 50), Parent = b })
+	end
+	-- counter, microwave, fridge, bulletin board
+	part({ Name = "Counter", Size = Vector3.new(5, 3.4, 1.8), Position = Vector3.new(-40, 1.7, 5.6), Material = M.Wood, Color = Color3.fromRGB(120, 95, 70), Parent = b })
+	part({ Name = "Microwave", Size = Vector3.new(1.6, 1, 1.1), Position = Vector3.new(-41, 3.9, 5.6), Material = M.Metal, Color = Color3.fromRGB(220, 220, 215), Parent = b })
+	poweredNeon({ Name = "MicrowaveClock", Size = Vector3.new(0.4, 0.2, 0.05), Position = Vector3.new(-40.5, 4.1, 5.03), Color = Color3.fromRGB(90, 220, 110), CanCollide = false, Parent = b })
+	part({ Name = "Fridge", Size = Vector3.new(2.4, 6.5, 2), Position = Vector3.new(-44.5, 3.25, 5.4), Material = M.Metal, Color = Color3.fromRGB(215, 215, 210), Parent = b })
+	local board = part({ Name = "BulletinBoard", Size = Vector3.new(3.5, 2.4, 0.1), Position = Vector3.new(-37, 6.4, 6.45), Material = M.Fabric, Color = Color3.fromRGB(130, 95, 60), CanCollide = false, Parent = b })
+	label(surfaceGui(board, Enum.NormalId.Front, 40), "NIGHT CREW\nDO NOT LOOK AWAY\nFROM MANAGEMENT", { TextColor3 = Color3.fromRGB(240, 235, 210) })
+	-- vending machine (the shop, Phase 7)
+	part({ Name = "VendingMachine", Size = Vector3.new(3, 6.5, 2.2), Position = Vector3.new(-33.2, 3.25, 5.4), Material = M.Metal, Color = Color3.fromRGB(160, 40, 40), Parent = b })
+	local vfront = poweredNeon({ Name = "VendingFront", Size = Vector3.new(2.2, 4, 0.1), Position = Vector3.new(-33.4, 3.9, 4.25), Color = Color3.fromRGB(230, 220, 170), CanCollide = false, Parent = b }, Color3.fromRGB(255, 230, 170), 8)
+	label(surfaceGui(vfront, Enum.NormalId.Front, 40), "SNACKS\n& MORE", { TextColor3 = Color3.fromRGB(150, 40, 35) })
+	-- VIP lounge door (Phase 7)
+	part({ Name = "VIPDoor", Size = Vector3.new(3, 7, 0.3), Position = Vector3.new(-36.2, 3.5, 6.4), Material = M.Wood, Color = Color3.fromRGB(60, 45, 30), Parent = b })
+	local vip = part({ Name = "VIPSign", Size = Vector3.new(2.8, 0.7, 0.05), Position = Vector3.new(-36.2, 7.6, 6.2), Material = M.Neon, Color = Color3.fromRGB(215, 175, 60), CanCollide = false, Parent = b })
+	label(surfaceGui(vip, Enum.NormalId.Front, 50), "STAFF LOUNGE - VIP", { TextColor3 = Color3.fromRGB(40, 30, 10) })
+	tube(b, "BreakRoomTube", Vector3.new(-38, H - 0.3, -1), 6, "FluorescentTube", true)
 end
 
 local function buildLights(store: Instance)
@@ -825,6 +882,7 @@ function StoreBuilder.Build(): Model
 	buildHotFood(store)
 	buildProps(store)
 	buildHallway(store)
+	buildBreakRoom(store)
 	buildLights(store)
 	buildOutside(store)
 	buildBackRoom(store)

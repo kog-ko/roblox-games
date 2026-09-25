@@ -1,14 +1,32 @@
 --!strict
--- Saves best clean time, total spills cleaned, banked coffees and the highest night unlocked per player.
--- Every DataStore call is pcall'd and retried. If Studio has no API access, saving is
+-- One versioned profile per player (cash, unlocks, per-night bests, stats, upgrades, coffees,
+-- daily streak). Saved with UpdateAsync, merged with what's already stored so a stale server can
+-- never roll progress back. Every DataStore call is pcall'd and retried. Autosaves every
+-- Config.AutosaveInterval, on leave and on shutdown. If Studio has no API access, saving is
 -- switched off for the session (one warning) so playtests stay quiet.
+--
+-- Older saves (version 1: Best, TotalCleaned, CoffeeCredits, Unlocked) are migrated on load.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 
-export type Profile = { Best: number?, TotalCleaned: number, CoffeeCredits: number, Unlocked: number, LoadFailed: boolean? }
+local VERSION = 2
+
+export type Profile = {
+	Version: number,
+	Cash: number,
+	Unlocked: number,
+	BestByNight: { [string]: number }, -- night number as a string (DataStore-safe keys) -> seconds
+	Stats: { TotalCleaned: number, ShiftsWorked: number, ShiftsWon: number, Catches: number, LegacyBest: number? },
+	Upgrades: { [string]: number }, -- upgrade id -> tier bought (0 = none)
+	CoffeeCredits: number,
+	Daily: { LastDay: number, Streak: number },
+	LoadFailed: boolean?,
+}
 
 local DataService = {}
+-- Called after a player's profile is loaded (other services apply upgrades, passes, etc.).
+DataService.Loaded = Instance.new("BindableEvent")
 local profiles: { [Player]: Profile } = {}
 local store: DataStore? = nil
 local disabled = false
@@ -56,32 +74,95 @@ else
 	disable(res)
 end
 
+local function blank(): Profile
+	return {
+		Version = VERSION,
+		Cash = 0,
+		Unlocked = 1,
+		BestByNight = {},
+		Stats = { TotalCleaned = 0, ShiftsWorked = 0, ShiftsWon = 0, Catches = 0 },
+		Upgrades = {},
+		CoffeeCredits = 0,
+		Daily = { LastDay = 0, Streak = 0 },
+	}
+end
+
+-- Turns whatever is stored (any version) into a current profile.
+local function fromStored(data: any): Profile
+	local p = blank()
+	if type(data) ~= "table" then
+		return p
+	end
+	if (data.Version or 1) < 2 then
+		-- version 1: one best time for the single old shift
+		p.Stats.TotalCleaned = tonumber(data.TotalCleaned) or 0
+		p.Stats.LegacyBest = tonumber(data.Best)
+		p.CoffeeCredits = tonumber(data.CoffeeCredits) or 0
+		p.Unlocked = math.max(1, tonumber(data.Unlocked) or 1)
+		return p
+	end
+	p.Cash = tonumber(data.Cash) or 0
+	p.Unlocked = math.max(1, tonumber(data.Unlocked) or 1)
+	p.CoffeeCredits = tonumber(data.CoffeeCredits) or 0
+	if type(data.BestByNight) == "table" then
+		for k, v in data.BestByNight do
+			if type(v) == "number" then
+				p.BestByNight[tostring(k)] = v
+			end
+		end
+	end
+	if type(data.Stats) == "table" then
+		for k, v in data.Stats do
+			if type(v) == "number" then
+				(p.Stats :: any)[k] = v
+			end
+		end
+	end
+	if type(data.Upgrades) == "table" then
+		for k, v in data.Upgrades do
+			if type(v) == "number" then
+				p.Upgrades[k] = v
+			end
+		end
+	end
+	if type(data.Daily) == "table" then
+		p.Daily.LastDay = tonumber(data.Daily.LastDay) or 0
+		p.Daily.Streak = tonumber(data.Daily.Streak) or 0
+	end
+	return p
+end
+
+-- Mirrors what the client needs onto the player as attributes.
 local function publish(player: Player, p: Profile)
-	player:SetAttribute("Best", p.Best)
-	player:SetAttribute("TotalCleaned", p.TotalCleaned)
-	player:SetAttribute("CoffeeCredits", p.CoffeeCredits)
+	player:SetAttribute("Cash", p.Cash)
 	player:SetAttribute("Unlocked", p.Unlocked)
+	player:SetAttribute("TotalCleaned", p.Stats.TotalCleaned)
+	player:SetAttribute("CoffeeCredits", p.CoffeeCredits)
+	player:SetAttribute("DailyStreak", p.Daily.Streak)
+	local night = game:GetService("ReplicatedStorage"):GetAttribute("Night") or 1
+	player:SetAttribute("Best", p.BestByNight[tostring(night)])
+	for id in Config.Upgrades do
+		player:SetAttribute("Upgrade_" .. id, p.Upgrades[id] or 0)
+	end
 end
 
 function DataService.Load(player: Player)
-	local profile: Profile = { Best = nil, TotalCleaned = 0, CoffeeCredits = 0, Unlocked = 1 }
+	local profile = blank()
 	if store and not disabled then
 		local s = store :: DataStore
 		local loaded, data = retry("load " .. player.UserId, function()
 			return s:GetAsync(tostring(player.UserId))
 		end)
-		if loaded and type(data) == "table" then
-			profile.Best = data.Best
-			profile.TotalCleaned = data.TotalCleaned or 0
-			profile.CoffeeCredits = data.CoffeeCredits or 0
-			profile.Unlocked = math.max(1, data.Unlocked or 1)
-		elseif not loaded and not disabled then
+		if loaded then
+			profile = fromStored(data)
+		elseif not disabled then
 			profile.LoadFailed = true -- don't overwrite real data with blanks
 		end
 	end
 	if player.Parent then
 		profiles[player] = profile
 		publish(player, profile)
+		DataService.Loaded:Fire(player, profile)
 	end
 end
 
@@ -97,6 +178,13 @@ function DataService.Update(player: Player, fn: (Profile) -> ())
 	end
 end
 
+-- Re-publishes attributes that depend on the selected night (the per-night best).
+function DataService.RefreshAll()
+	for player, p in profiles do
+		publish(player, p)
+	end
+end
+
 function DataService.Save(player: Player): boolean
 	local p = profiles[player]
 	if not p or p.LoadFailed or not store or disabled then
@@ -104,18 +192,30 @@ function DataService.Save(player: Player): boolean
 	end
 	local s = store :: DataStore
 	local saved = retry("save " .. player.UserId, function()
-		s:UpdateAsync(tostring(player.UserId), function(old)
-			old = if type(old) == "table" then old else {}
-			local best = p.Best
-			if type(old.Best) == "number" and (best == nil or old.Best < best) then
-				best = old.Best
+		s:UpdateAsync(tostring(player.UserId), function(stored)
+			local old = fromStored(stored)
+			local out = blank()
+			-- this server's session is the authority for spendable values
+			out.Cash = p.Cash
+			out.CoffeeCredits = p.CoffeeCredits
+			out.Daily = { LastDay = p.Daily.LastDay, Streak = p.Daily.Streak }
+			-- progress only ever goes forward
+			out.Unlocked = math.max(p.Unlocked, old.Unlocked)
+			for k, v in old.BestByNight do
+				out.BestByNight[k] = v
 			end
-			return {
-				Best = best,
-				TotalCleaned = math.max(p.TotalCleaned, old.TotalCleaned or 0),
-				CoffeeCredits = p.CoffeeCredits,
-				Unlocked = math.max(p.Unlocked, old.Unlocked or 1),
-			}
+			for k, v in p.BestByNight do
+				out.BestByNight[k] = math.min(v, out.BestByNight[k] or math.huge)
+			end
+			for k, v in p.Stats :: any do
+				if type(v) == "number" then
+					(out.Stats :: any)[k] = math.max(v, ((old.Stats :: any)[k] or 0) :: number)
+				end
+			end
+			for k, v in p.Upgrades do
+				out.Upgrades[k] = math.max(v, old.Upgrades[k] or 0)
+			end
+			return out
 		end)
 	end)
 	return saved
@@ -152,6 +252,10 @@ function DataService.Init()
 			end
 		end
 	end)
+	game:GetService("ReplicatedStorage"):GetAttributeChangedSignal("Night"):Connect(DataService.RefreshAll)
 end
+
+-- For tests: what a stored value of any version loads as.
+DataService._fromStored = fromStored
 
 return DataService
