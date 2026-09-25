@@ -5,9 +5,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local SocialService = game:GetService("SocialService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Clock = require(Shared:WaitForChild("Clock"))
+local Progress = require(Shared:WaitForChild("Progress"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ReadyUp = Remotes:WaitForChild("ReadyUp") :: RemoteEvent
 local RequestCoffee = Remotes:WaitForChild("RequestCoffee") :: RemoteEvent
@@ -82,12 +84,17 @@ function Hud.Start()
 	local coffeeBtn = button(bar, "Coffee", "COFFEE", UDim2.fromOffset(130, 46), UDim2.new(1, -12, 0.42, 0), Vector2.new(1, 0.5), Color3.fromRGB(190, 140, 80))
 
 	-- Lobby panel
-	local lobby = box(gui, "Lobby", UDim2.fromOffset(340, 226), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0))
+	local lobby = box(gui, "Lobby", UDim2.fromOffset(340, 250), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0))
 	text(lobby, "Title", "CLOSING SHIFT", UDim2.new(1, -20, 0, 42), UDim2.fromOffset(10, 8), RED)
 	local nightText = text(lobby, "Night", "NIGHT 1", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 54), Color3.fromRGB(255, 215, 90))
 	text(lobby, "Goal", "MOP EVERY SPILL BEFORE 6:00 AM", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 80))
 	local countText = text(lobby, "Countdown", "SHIFT STARTS IN 15", UDim2.new(1, -20, 0, 24), UDim2.fromOffset(10, 106))
-	local bestText = text(lobby, "Best", "BEST: --", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 134))
+	local bestText = text(lobby, "Best", "BEST: --", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 130))
+	-- career rank progress, this week's spills (Employee of the Week) and the crew bonus
+	local rankText = text(lobby, "Rank", "TRAINEE", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 150), Color3.fromRGB(255, 215, 90))
+	local weekText = text(lobby, "Week", "", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 170))
+	-- inviting friends pays: +10% per friend in the server
+	local inviteBtn = button(gui, "Invite", "INVITE: +10% PAY", UDim2.fromOffset(150, 44), UDim2.new(0, 12, 0.45, 0), Vector2.new(0, 0.5), Color3.fromRGB(110, 160, 220))
 	local readyBtn = button(lobby, "Ready", "READY", UDim2.fromOffset(150, 50), UDim2.new(0.5, -6, 1, -10), Vector2.new(1, 1), Color3.fromRGB(120, 190, 110))
 
 	-- Results
@@ -129,6 +136,12 @@ function Hud.Start()
 		bestText.Text = if type(best) == "number" then "BEST: " .. Clock.Duration(best) else "BEST: --"
 		-- READY on the left, SHOP (added by Shop.lua) on the right
 		readyBtn.Position = UDim2.new(0.5, -6, 1, -10)
+		local total = (player:GetAttribute("TotalCleaned") or 0) :: number
+		local _, rankName, nextAt = Progress.Rank(total)
+		rankText.Text = if nextAt then string.format("%s  (%d TO NEXT RANK)", rankName, nextAt - total) else rankName
+		local friends = (player:GetAttribute("CrewFriends") or 0) :: number
+		weekText.Text = string.format("THIS WEEK: %d SPILLS%s", (player:GetAttribute("WeeklyCleaned") or 0) :: number,
+			if friends > 0 then string.format("   CREW +%d%%", math.floor(friends * Config.Pay.CrewBonusPerFriend * 100 + 0.5)) else "")
 		local credits = (player:GetAttribute("CoffeeCredits") or 0) :: number
 		local used = player:GetAttribute("CoffeeUsed") == true
 		local inShift = ReplicatedStorage:GetAttribute("Phase") == "Shift"
@@ -140,6 +153,7 @@ function Hud.Start()
 	local function refreshPhase()
 		local phase = ReplicatedStorage:GetAttribute("Phase")
 		lobby.Visible = phase == "Lobby"
+		inviteBtn.Visible = phase == "Lobby"
 		bar.Visible = phase == "Shift" or phase == "Payoff" or phase == "LightsOut"
 		if phase == "Lobby" then
 			results.Visible = false
@@ -200,6 +214,14 @@ function Hud.Start()
 	coffeeBtn.Activated:Connect(function()
 		RequestCoffee:FireServer()
 	end)
+	inviteBtn.Activated:Connect(function()
+		local ok, can = pcall(SocialService.CanSendGameInviteAsync, SocialService, player)
+		if ok and can then
+			pcall(SocialService.PromptGameInvite, SocialService, player)
+		else
+			showToast("INVITES AREN'T AVAILABLE RIGHT NOW", 3)
+		end
+	end)
 	noteClose.Activated:Connect(function()
 		note.Visible = false
 	end)
@@ -221,6 +243,21 @@ function Hud.Start()
 			resBody.Text = string.format("CLEAN TIME   %s%s\nBEST         %s\n\nYOU CLEANED  %d\nTEAM CLEANED %d\nLIFETIME     %d",
 				Clock.Duration(r.CleanTime), if r.NewBest then "  NEW BEST!" else "",
 				if r.Best then Clock.Duration(r.Best) else "--", r.Cleaned, r.TeamCleaned, r.TotalCleaned)
+		end
+		-- the crew, best cleaner first; the MVP gets a crown
+		if type(r.Crew) == "table" and #r.Crew > 1 then
+			local parts = {}
+			for _, c in r.Crew do
+				local name = string.upper(tostring(c.Name)):sub(1, 12)
+				table.insert(parts, string.format("%s%s %d", if c.UserId == r.Mvp then "MVP " else "", name, c.Cleaned))
+			end
+			resBody.Text ..= "\nCREW  " .. table.concat(parts, " / ")
+			if r.Mvp == player.UserId then
+				resTitle.Text ..= "  MVP!"
+			end
+		end
+		if r.Outcome ~= "Fired" and r.Ranked == false then
+			resBody.Text ..= "\n(BOOSTED RUN: NOT ON THE FASTEST BOARD)"
 		end
 		if type(r.Pay) == "table" and type(r.Pay.Lines) == "table" then
 			local lines = {}

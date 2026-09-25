@@ -66,6 +66,9 @@ Config.FirstPerson = {
 Config.PerfectShiftFraction = 0.6 -- "Perfect Shift" = cleaned in under this fraction of the night's clock
 Config.LeaderboardSize = 10
 Config.LeaderboardRefresh = 60
+Config.BoardCycle = 12 -- seconds the counter board shows each page (Employee of the Week / fastest night)
+Config.WeeklyStoreName = "ClosingShift_WeeklySpills_v1" -- one OrderedDataStore per week (W<n> is added)
+Config.TrophyRefresh = 1800 -- how often a server re-reads last week's top 3
 Config.AutosaveInterval = 120
 Config.DataRetries = 3
 
@@ -96,6 +99,19 @@ Config.Pay = {
 	FastFraction = 0.5, -- a win in under this fraction of the night's clock...
 	FastBonus = 50, -- ...pays this bonus
 	NoCatchBonus = 30, -- won a night that has the Manager without being caught
+	CrewBonusPerFriend = 0.1, -- +10% paycheck for each Roblox friend in the server...
+	CrewBonusMaxFriends = 3, -- ...up to this many
+}
+
+-- Career ranks, earned by total spills cleaned (ever). Shown on the name tag above your head.
+Config.Ranks = {
+	{ Name = "TRAINEE", Cleaned = 0 },
+	{ Name = "STOCK CLERK", Cleaned = 25 },
+	{ Name = "NIGHT CREW", Cleaned = 100 },
+	{ Name = "NIGHT LEAD", Cleaned = 250 },
+	{ Name = "SHIFT MANAGER", Cleaned = 600 },
+	{ Name = "REGIONAL MANAGER", Cleaned = 1500 },
+	{ Name = "THE ONE WHO STAYED", Cleaned = 4000 },
 }
 
 -- Daily Shift Bonus: paid on your first shift each (UTC) day; grows on consecutive days.

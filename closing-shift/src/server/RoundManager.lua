@@ -34,6 +34,9 @@ local penalty = 0 -- seconds taken off this shift's clock (Manager catches)
 local shiftStart = 0
 local reviveRequested = false -- Clock In Late bought on the YOU'RE FIRED screen
 local revivedThisNight = false
+-- true once anything bought with Robux helped this night (a server boost, Second Chance, Clock In
+-- Late, coffee, the Industrial Mop): the clean time then isn't submitted to the fastest-shift board
+local assisted = false
 local night = Config.DefaultNight -- which night the next shift plays (the shift board sets this)
 local modifiers: { string } = {}
 
@@ -76,8 +79,15 @@ local function spawnCFrame(): CFrame
 	return sp.CFrame + Vector3.new(math.random() * 3 - 1.5, 3, math.random() * 3 - 1.5)
 end
 
-local function onCleaned(player: Player, isFinal: boolean)
+local function onCleaned(player: Player, isFinal: boolean, counts: boolean)
 	player:SetAttribute("Cleaned", ((player:GetAttribute("Cleaned") or 0) :: number) + 1)
+	if counts then
+		-- spills you mopped yourself: these go on the weekly board
+		player:SetAttribute("RankedCleaned", ((player:GetAttribute("RankedCleaned") or 0) :: number) + 1)
+	end
+	if player:GetAttribute("IndustrialMop") then
+		assisted = true
+	end
 	DataService.Update(player, function(p)
 		p.Stats.TotalCleaned += 1
 	end)
@@ -130,8 +140,10 @@ local shiftLoop: (Rules.Rules, number) -> number?
 -- Returns clean time in seconds, or nil if the clock ran out.
 local function runShift(rules: Rules.Rules): number?
 	won, finalCleaned, finalCleaner, skipTimer, penalty = false, false, nil, false, 0
+	assisted = false
 	for _, p in Players:GetPlayers() do
 		p:SetAttribute("Cleaned", 0)
+		p:SetAttribute("RankedCleaned", 0)
 		p:SetAttribute("CoffeeUsed", false)
 		p:SetAttribute("CaughtThisShift", false)
 		p:SetAttribute("CoffeeUntil", nil)
@@ -190,9 +202,18 @@ end
 
 local function runResults(rules: Rules.Rules, cleanTime: number?)
 	local teamCleaned = 0
+	local crew = {}
 	for _, p in Players:GetPlayers() do
-		teamCleaned += (p:GetAttribute("Cleaned") or 0) :: number
+		local c = (p:GetAttribute("Cleaned") or 0) :: number
+		teamCleaned += c
+		table.insert(crew, { Name = p.DisplayName, UserId = p.UserId, Cleaned = c })
 	end
+	table.sort(crew, function(a, b)
+		return a.Cleaned > b.Cleaned
+	end)
+	-- MVP: the crew's top cleaner, when there's a crew and a clear winner
+	local mvp = if #crew > 1 and crew[1].Cleaned > crew[2].Cleaned then crew[1].UserId else nil
+	local ranked = cleanTime ~= nil and not assisted
 	local final = cleanTime ~= nil and rules.Night >= Rules.NightCount()
 	local key = tostring(rules.Night)
 	for _, p in Players:GetPlayers() do
@@ -211,12 +232,16 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 			end
 		end)
 		if cleanTime then
-			task.spawn(Leaderboard.Submit, rules.Night, p.UserId, cleanTime)
+			if ranked then
+				task.spawn(Leaderboard.Submit, rules.Night, p.UserId, cleanTime)
+			end
 			if cleanTime < rules.ShiftLength * Config.PerfectShiftFraction then
 				Badges.Award(p, "PerfectShift")
 			end
 		end
 		Badges.Award(p, "FirstShift")
+		task.spawn(Leaderboard.AddWeekly, p, (p:GetAttribute("RankedCleaned") or 0) :: number)
+		p:SetAttribute("RankedCleaned", 0) -- counted; a revive only adds new spills
 		if cleanTime then
 			Analytics.Event(p, "ShiftCompleted", math.floor(cleanTime * 10 + 0.5) / 10, rules.Name, rules.Night)
 			if rules.Night == 1 then
@@ -245,6 +270,9 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 			Final = final,
 			Pay = pay,
 			Cash = prof and prof.Cash or 0,
+			Crew = crew,
+			Mvp = mvp,
+			Ranked = ranked,
 		})
 	end
 	-- a win moves the party on to the next night (if everyone has it); a loss replays this one
@@ -277,6 +305,7 @@ end
 -- Clock In Late: the night picks up again at 5:00 AM with half the floor spills gone.
 local function runRevive(rules: Rules.Rules): number?
 	revivedThisNight = true
+	assisted = true -- Clock In Late was bought
 	night = rules.Night -- the loss moved nothing on, but make sure we replay the same night
 	publishNight()
 	won, skipTimer, penalty = false, false, 0
@@ -332,6 +361,11 @@ function RoundManager.ForceTimeout()
 	skipTimer = true
 end
 
+-- Something bought with Robux helped this night (coffee; the rest are tracked here).
+function RoundManager.MarkAssisted()
+	assisted = true
+end
+
 -- Takes seconds off the running shift: the clock jumps forward for everyone.
 function RoundManager.AddPenalty(seconds: number)
 	if ReplicatedStorage:GetAttribute("Phase") ~= "Shift" then
@@ -357,10 +391,16 @@ function RoundManager.Init(s: Instance)
 		end
 	end
 	Manager.OnUndoCatch = function(player: Player)
+		assisted = true -- Second Chance was bought
 		player:SetAttribute("CaughtThisShift", false)
 		RoundManager.AddPenalty(-Config.Manager.TimePenalty)
 	end
 	SpillService.OnCleaned = onCleaned
+	ServerBoosts.OnApplied = function()
+		if ReplicatedStorage:GetAttribute("Phase") == "Shift" then
+			assisted = true
+		end
+	end
 	ReadyRemote.OnServerEvent:Connect(function()
 		if ReplicatedStorage:GetAttribute("Phase") == "Lobby" then
 			readyRequested = true
@@ -383,7 +423,12 @@ function RoundManager.Init(s: Instance)
 		end)
 	end
 	Players.PlayerAdded:Connect(onPlayer)
-	Players.PlayerRemoving:Connect(function()
+	Players.PlayerRemoving:Connect(function(player)
+		-- leaving mid-shift keeps the spills you already mopped on the weekly board
+		local n = (player:GetAttribute("RankedCleaned") or 0) :: number
+		if n > 0 then
+			task.spawn(Leaderboard.AddWeekly, player, n)
+		end
 		task.defer(publishNight)
 	end)
 	for _, p in Players:GetPlayers() do

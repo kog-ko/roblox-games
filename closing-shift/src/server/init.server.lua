@@ -45,6 +45,7 @@ local Monetization = require(script.Monetization)
 local Manager = require(script.Manager)
 local RoundManager = require(script.RoundManager)
 local ShiftBoard = require(script.ShiftBoard)
+local NameTags = require(script.NameTags)
 
 -- analytics listens first so it sees every profile load; the cash and purchase hooks feed it
 Analytics.Init()
@@ -66,6 +67,7 @@ Monetization.Init(s)
 Manager.Init(s)
 RoundManager.Init(s)
 ShiftBoard.Init(s)
+NameTags.Init()
 task.spawn(RoundManager.Run)
 
 -- Flashlight on/off is cosmetic: store it so every client can draw the beam.

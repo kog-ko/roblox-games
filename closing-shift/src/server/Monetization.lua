@@ -68,37 +68,6 @@ local function owns(player: Player, pass: string): boolean
 	return prof ~= nil and prof.GiftedPasses[pass] == true
 end
 
-local function refreshNameTag(player: Player)
-	local char = player.Character
-	local head = char and char:FindFirstChild("Head")
-	if not head then
-		return
-	end
-	local old = head:FindFirstChild("VIPTag")
-	if old then
-		old:Destroy()
-	end
-	if not player:GetAttribute("VIP") then
-		return
-	end
-	local bb = Instance.new("BillboardGui")
-	bb.Name = "VIPTag"
-	bb.Size = UDim2.fromOffset(160, 36)
-	bb.StudsOffset = Vector3.new(0, 2.2, 0)
-	bb.MaxDistance = 60
-	bb.LightInfluence = 0
-	bb.Parent = head
-	local t = Instance.new("TextLabel")
-	t.BackgroundTransparency = 1
-	t.Size = UDim2.fromScale(1, 1)
-	t.Font = Enum.Font.Arcade
-	t.TextScaled = true
-	t.TextColor3 = Color3.fromRGB(255, 205, 70)
-	t.TextStrokeTransparency = 0.3
-	t.Text = "VIP " .. string.upper(player.DisplayName)
-	t.Parent = bb
-end
-
 -- Publishes pass perks as attributes (the rest of the game reads these).
 local function applyPerks(player: Player)
 	local vip = owns(player, "VIP")
@@ -110,7 +79,6 @@ local function applyPerks(player: Player)
 	player:SetAttribute("BigFlashlight", flash or nil)
 	player:SetAttribute("BeamMult", if flash then R.BigFlashlightBeam else nil)
 	Economy.ApplyUpgrades(player) -- battery stacks with the Big Flashlight
-	refreshNameTag(player)
 	if mop and not hadMop and inShift() then
 		Mop.Give(player) -- swap to the gold one right away
 	end
@@ -141,6 +109,7 @@ function Monetization.ApplyCoffee(player: Player): boolean
 	-- The client's Movement module reads CoffeeUntil and applies Config.CoffeeWalkSpeed.
 	player:SetAttribute("CoffeeUsed", true)
 	player:SetAttribute("CoffeeUntil", workspace:GetServerTimeNow() + Config.CoffeeDuration)
+	RoundManager.MarkAssisted()
 	return true
 end
 
@@ -358,12 +327,6 @@ function Monetization.Init(s: Instance)
 	for _, p in Players:GetPlayers() do
 		task.spawn(checkPasses, p)
 	end
-	Players.PlayerAdded:Connect(function(player)
-		player.CharacterAdded:Connect(function(char)
-			char:WaitForChild("Head", 5)
-			refreshNameTag(player)
-		end)
-	end)
 	Players.PlayerRemoving:Connect(function(p)
 		ownedCache[p] = nil
 		pendingGift[p] = nil

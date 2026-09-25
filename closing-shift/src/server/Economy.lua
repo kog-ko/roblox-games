@@ -16,6 +16,36 @@ Economy.OnCashChanged = nil :: ((Player, number, string) -> ())?
 
 local lastBuy: { [Player]: number } = {}
 
+-- Crew bonus: +Config.Pay.CrewBonusPerFriend for each Roblox friend in the server (capped).
+-- Friendships are looked up once per pair and cached; the count is published as CrewFriends.
+local friendCache: { [string]: boolean } = {}
+
+local function areFriends(a: Player, b: Player): boolean
+	local key = if a.UserId < b.UserId then a.UserId .. ":" .. b.UserId else b.UserId .. ":" .. a.UserId
+	local known = friendCache[key]
+	if known == nil then
+		local ok, res = pcall(a.IsFriendsWith, a, b.UserId)
+		known = ok and res == true
+		if ok then
+			friendCache[key] = known
+		end
+	end
+	return known == true
+end
+
+local function refreshCrew()
+	local all = Players:GetPlayers()
+	for _, p in all do
+		local n = 0
+		for _, other in all do
+			if other ~= p and areFriends(p, other) then
+				n += 1
+			end
+		end
+		p:SetAttribute("CrewFriends", math.min(n, Config.Pay.CrewBonusMaxFriends))
+	end
+end
+
 function Economy.AddCash(player: Player, amount: number, source: string)
 	if amount <= 0 then
 		return
@@ -118,6 +148,10 @@ function Economy.Paycheck(player: Player, rules: any, cleanTime: number?, finalC
 			add("NEVER CAUGHT", P.NoCatchBonus)
 		end
 	end
+	local friends = (player:GetAttribute("CrewFriends") or 0) :: number
+	if friends > 0 then
+		add(string.format("CREW BONUS (%d FRIEND%s)", friends, if friends > 1 then "S" else ""), math.floor(base * P.CrewBonusPerFriend * friends))
+	end
 	local mult = Economy.PayMultiplier(player)
 	local total = math.floor(base * mult)
 	Economy.AddCash(player, total, "Paycheck")
@@ -168,7 +202,12 @@ function Economy.Init(store: Instance)
 	end
 	Players.PlayerRemoving:Connect(function(p)
 		lastBuy[p] = nil
+		task.defer(refreshCrew)
 	end)
+	Players.PlayerAdded:Connect(function()
+		task.spawn(refreshCrew)
+	end)
+	task.spawn(refreshCrew)
 	-- the locker in the break room opens the upgrade menu on the client (see Locker.lua)
 	local locker = store:FindFirstChild("MyLocker", true)
 	if locker and locker:IsA("BasePart") then

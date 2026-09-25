@@ -1,24 +1,27 @@
 --!strict
--- Global top-10 fastest clean times per night (one OrderedDataStore per night), drawn on the
--- board by the counter for whichever night is selected. Times are stored as integer tenths of a
--- second (ascending = fastest first).
+-- Two global boards, shown in turn on the board by the counter:
+--   EMPLOYEE OF THE WEEK   most spills cleaned this week (resets Monday 00:00 UTC; one
+--                          OrderedDataStore per week). Only spills you mopped yourself count:
+--                          Spill Storm spills and the paid janitor's cleans don't.
+--   FASTEST NIGHT N        top-10 clean times for the selected night. Runs helped by anything
+--                          bought with Robux (see RoundManager) aren't submitted.
+-- Last week's top 3 get a trophy on their name tag all week (player attribute WeeklyTrophy = 1..3).
+-- Times are stored as integer tenths of a second (ascending = fastest first).
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Clock = require(ReplicatedStorage.Shared.Clock)
+local Progress = require(ReplicatedStorage.Shared.Progress)
 
 local Leaderboard = {}
-local stores: { [number]: OrderedDataStore } = {}
+local stores: { [string]: OrderedDataStore } = {}
 local offline = false
 local names: { [number]: string } = {}
+local titleLabel: TextLabel? = nil
 local listLabel: TextLabel? = nil
-
-local function setText(t: string)
-	if listLabel then
-		listLabel.Text = t
-	end
-end
+local pages = { weekly = "loading...", night = "loading..." }
+local trophies: { [number]: number } = {} -- userId -> last week's rank (1..3)
 
 local function goOffline(err: any)
 	if offline then
@@ -26,7 +29,8 @@ local function goOffline(err: any)
 	end
 	offline = true
 	warn("[Leaderboard] offline this session:", err)
-	setText("board offline\n(publish the place and\nenable API access)")
+	pages.weekly = "board offline\n(publish the place and\nenable API access)"
+	pages.night = pages.weekly
 end
 
 local function nameFor(userId: number): string
@@ -39,50 +43,89 @@ local function nameFor(userId: number): string
 	return result
 end
 
--- ClosingShift_BestTimes_v1 -> ClosingShift_BestTimes_N2_v1 for night 2
-local function storeFor(night: number): OrderedDataStore?
+local function ordered(name: string): OrderedDataStore?
 	if offline then
 		return nil
 	end
-	if stores[night] then
-		return stores[night]
+	if stores[name] then
+		return stores[name]
 	end
-	local name = Config.LeaderboardStoreName:gsub("_v(%d+)$", "_N" .. night .. "_v%1")
 	local ok, res = pcall(DataStoreService.GetOrderedDataStore, DataStoreService, name)
 	if not ok then
 		goOffline(res)
 		return nil
 	end
-	stores[night] = res
+	stores[name] = res
 	return res
+end
+
+-- ClosingShift_BestTimes_v1 -> ClosingShift_BestTimes_N2_v1 for night 2
+local function nightStore(night: number): OrderedDataStore?
+	return ordered((Config.LeaderboardStoreName:gsub("_v(%d+)$", "_N" .. night .. "_v%1")))
+end
+
+-- ClosingShift_WeeklySpills_v1 -> ClosingShift_WeeklySpills_W2960_v1
+local function weekStore(week: number): OrderedDataStore?
+	return ordered((Config.WeeklyStoreName:gsub("_v(%d+)$", "_W" .. week .. "_v%1")))
+end
+
+local function top(ods: OrderedDataStore, ascending: boolean, size: number): { any }?
+	local ok, result = pcall(ods.GetSortedAsync, ods, ascending, size)
+	if not ok then
+		goOffline(result)
+		return nil
+	end
+	return (result :: DataStorePages):GetCurrentPage()
 end
 
 local function currentNight(): number
 	return (ReplicatedStorage:GetAttribute("Night") or 1) :: number
 end
 
+local function show(page: string)
+	if not (titleLabel and listLabel) then
+		return
+	end
+	if page == "weekly" then
+		titleLabel.Text = "EMPLOYEE OF THE WEEK"
+		titleLabel.TextColor3 = Color3.fromRGB(255, 205, 70)
+		listLabel.Text = pages.weekly
+	else
+		titleLabel.Text = "FASTEST SHIFTS"
+		titleLabel.TextColor3 = Color3.fromRGB(220, 210, 140)
+		listLabel.Text = pages.night
+	end
+end
+
 function Leaderboard.Refresh(night: number?)
 	local n = night or currentNight()
-	local ods = storeFor(n)
-	if not ods then
-		return
+	local ods = nightStore(n)
+	local entries = ods and top(ods, true, Config.LeaderboardSize)
+	if entries then
+		local lines = { string.format("NIGHT %d", n) }
+		for rank, entry in entries do
+			local uid = tonumber(entry.key) or 0
+			table.insert(lines, string.format("%2d. %-16s %s", rank, nameFor(uid):sub(1, 16), Clock.Duration(entry.value / 10)))
+		end
+		pages.night = if #lines > 1 then table.concat(lines, "\n") else string.format("NIGHT %d\nno clean shifts yet.\nbe the first.", n)
 	end
-	local ok, pages = pcall(ods.GetSortedAsync, ods, true, Config.LeaderboardSize)
-	if not ok then
-		goOffline(pages)
-		return
+	local week = Progress.Week()
+	local wods = weekStore(week)
+	local wentries = wods and top(wods, false, Config.LeaderboardSize)
+	if wentries then
+		local left = Progress.WeekEnds(week) - os.time()
+		local lines = { string.format("SPILLS  (RESETS %dD %dH)", left // 86400, (left % 86400) // 3600) }
+		for rank, entry in wentries do
+			local uid = tonumber(entry.key) or 0
+			table.insert(lines, string.format("%2d. %-16s %d", rank, nameFor(uid):sub(1, 16), entry.value))
+		end
+		pages.weekly = if #lines > 1 then table.concat(lines, "\n") else lines[1] .. "\nnobody yet this week.\nclean something."
 	end
-	local lines = { string.format("NIGHT %d", n) }
-	for rank, entry in (pages :: DataStorePages):GetCurrentPage() do
-		local uid = tonumber(entry.key) or 0
-		table.insert(lines, string.format("%2d. %-16s %s", rank, nameFor(uid):sub(1, 16), Clock.Duration(entry.value / 10)))
-	end
-	setText(if #lines > 1 then table.concat(lines, "\n") else string.format("NIGHT %d\nno clean shifts yet.\nbe the first.", n))
 end
 
 -- Records a time if it beats the player's previous entry.
 function Leaderboard.Submit(night: number, userId: number, seconds: number)
-	local ods = storeFor(night)
+	local ods = nightStore(night)
 	if not ods then
 		return
 	end
@@ -104,11 +147,83 @@ function Leaderboard.Submit(night: number, userId: number, seconds: number)
 	end
 end
 
+-- Adds spills to this week's count for a player; publishes their new total (WeeklyCleaned).
+function Leaderboard.AddWeekly(player: Player, spills: number)
+	if spills <= 0 then
+		return
+	end
+	local ods = weekStore(Progress.Week())
+	if not ods then
+		return
+	end
+	for attempt = 1, Config.DataRetries do
+		local ok, result = pcall(ods.IncrementAsync, ods, tostring(player.UserId), spills)
+		if ok then
+			if player.Parent then
+				player:SetAttribute("WeeklyCleaned", result)
+			end
+			return
+		end
+		warn("[Leaderboard] weekly add failed:", result)
+		task.wait(2 ^ attempt)
+	end
+end
+
+local function loadWeekly(player: Player)
+	local ods = weekStore(Progress.Week())
+	if not ods then
+		return
+	end
+	local ok, value = pcall(ods.GetAsync, ods, tostring(player.UserId))
+	if ok and player.Parent then
+		player:SetAttribute("WeeklyCleaned", if type(value) == "number" then value else 0)
+	end
+end
+
+local function applyTrophy(player: Player)
+	player:SetAttribute("WeeklyTrophy", trophies[player.UserId])
+end
+
+-- Last week's top 3 (their trophies last all of this week).
+local function refreshTrophies()
+	local ods = weekStore(Progress.Week() - 1)
+	local entries = ods and top(ods, false, 3)
+	if not entries then
+		return
+	end
+	trophies = {}
+	for rank, entry in entries do
+		local uid = tonumber(entry.key)
+		if uid and entry.value > 0 then
+			trophies[uid] = rank
+		end
+	end
+	for _, p in Players:GetPlayers() do
+		applyTrophy(p)
+	end
+end
+
 function Leaderboard.Init(store: Instance)
 	local board = store:FindFirstChild("Leaderboard")
-	local label = board and board:FindFirstChild("List", true)
-	if label and label:IsA("TextLabel") then
-		listLabel = label
+	local gui = board and board:FindFirstChild("BoardGui", true)
+	if gui then
+		for _, c in gui:GetChildren() do
+			if c:IsA("TextLabel") then
+				if c.Name == "List" then
+					listLabel = c
+				elseif not titleLabel then
+					titleLabel = c
+				end
+			end
+		end
+	end
+	local function onPlayer(p: Player)
+		applyTrophy(p)
+		task.spawn(loadWeekly, p)
+	end
+	Players.PlayerAdded:Connect(onPlayer)
+	for _, p in Players:GetPlayers() do
+		onPlayer(p)
 	end
 	ReplicatedStorage:GetAttributeChangedSignal("Night"):Connect(function()
 		task.spawn(Leaderboard.Refresh)
@@ -117,6 +232,21 @@ function Leaderboard.Init(store: Instance)
 		while not offline do
 			Leaderboard.Refresh()
 			task.wait(Config.LeaderboardRefresh)
+		end
+	end)
+	task.spawn(function()
+		while not offline do
+			refreshTrophies()
+			task.wait(Config.TrophyRefresh)
+		end
+	end)
+	-- the board alternates between the two pages
+	task.spawn(function()
+		local page = "weekly"
+		while true do
+			show(page)
+			task.wait(Config.BoardCycle)
+			page = if page == "weekly" then "night" else "weekly"
 		end
 	end)
 end

@@ -18,11 +18,13 @@ type Spill = {
 	Finished: { [Player]: number }, -- completed holds waiting for Triggered
 	Squeaks: { [Player]: Sound }, -- looping mop squeak per player, stopped when the hold ends
 	Done: boolean,
+	Bonus: boolean?, -- added by a paid Spill Storm: pays, but doesn't count toward rankings
 }
 
 local SpillService = {}
--- Hooks set by RoundManager
-SpillService.OnCleaned = nil :: ((Player, boolean) -> ())?
+-- Hooks set by RoundManager. OnCleaned's third argument is false for cleans that mustn't count
+-- toward rankings (Spill Storm spills, spills the paid janitor cleaned).
+SpillService.OnCleaned = nil :: ((Player, boolean, boolean) -> ())?
 SpillService.OnFinalSpawned = nil :: (() -> ())?
 
 local COLORS = {
@@ -132,7 +134,7 @@ local function tweenSizes(spill: Spill, scale: number, t: number)
 	end
 end
 
-local function finish(spill: Spill, player: Player)
+local function finish(spill: Spill, player: Player, assisted: boolean?)
 	spill.Done = true
 	spill.Prompt.Enabled = false
 	for p in spill.Squeaks do
@@ -150,7 +152,7 @@ local function finish(spill: Spill, player: Player)
 	end
 	updateCount()
 	if SpillService.OnCleaned then
-		SpillService.OnCleaned(player, spill.IsFinal)
+		SpillService.OnCleaned(player, spill.IsFinal, not spill.Bonus and not assisted)
 	end
 	-- Everything on the floor is clean: bring out the back-room spill.
 	if next(active) == nil and finalPending and accepting then
@@ -357,7 +359,7 @@ function SpillService.CleanForPlayer(m: Model, player: Player): boolean
 	if not s or s.Done or not accepting then
 		return false
 	end
-	finish(s, player)
+	finish(s, player, true)
 	return true
 end
 
@@ -385,7 +387,8 @@ function SpillService.SpawnExtra(count: number): number
 			end
 		end
 		if free then
-			SpillService.Spawn(pos + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)))
+			local s = SpillService.Spawn(pos + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)))
+			s.Bonus = true
 			added += 1
 		end
 	end
@@ -440,7 +443,7 @@ function SpillService.DebugCleanOne(player: Player): boolean
 		if char then
 			char:PivotTo(CFrame.new(s.Parts[1].Position + Vector3.new(0, 3, 0)))
 		end
-		finish(s, player)
+		finish(s, player, true) -- test cleans never reach the public weekly board
 		return true
 	end
 	return false
