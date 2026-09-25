@@ -167,6 +167,9 @@ function shiftLoop(rules: Rules.Rules, start: number): number?
 	ServerBoosts.OnShiftStart()
 
 	while not won and not skipTimer and now() < start + rules.ShiftLength - penalty do
+		if #Players:GetPlayers() == 0 then
+			break -- the last player left: end the night now instead of running an empty clock
+		end
 		task.wait(0.1)
 	end
 	EventDirector.Stop()

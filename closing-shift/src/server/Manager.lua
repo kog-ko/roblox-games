@@ -401,14 +401,22 @@ function Manager.Init(s: Instance)
 		if typeof(cf) ~= "CFrame" then
 			return
 		end
+		local last = views[player]
+		if last and os.clock() - last.t < C.ReportMinInterval then
+			return -- clients report ~10 times a second; ignore anything faster
+		end
 		local head = player.Character and player.Character:FindFirstChild("Head") :: BasePart?
-		if not head or (cf.Position - head.Position).Magnitude > C.ReportMaxOffset then
-			return -- not where this player actually is
+		local offset = if head then (cf.Position - head.Position).Magnitude else math.huge
+		local look = cf.LookVector
+		-- "not <=" also rejects NaN, which would slip past a plain ">" check
+		if not (offset <= C.ReportMaxOffset) or look.X ~= look.X or look.Y ~= look.Y or look.Z ~= look.Z then
+			return -- not where this player actually is, or not a real view
 		end
 		views[player] = { cf = cf, t = os.clock() }
 	end)
 	Players.PlayerRemoving:Connect(function(p)
 		views[p] = nil
+		catches[p] = nil
 	end)
 end
 

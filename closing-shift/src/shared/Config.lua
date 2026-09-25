@@ -111,6 +111,7 @@ Config.Manager = {
 	ViewConeDegrees = 48, -- half-angle of the view cone that counts as "on screen"
 	ReportInterval = 0.1, -- how often each client sends its camera view
 	ReportMaxOffset = 6, -- a report further than this from the player's head is ignored
+	ReportMinInterval = 0.05, -- reports faster than this (seconds) are dropped
 	ReportMaxAge = 0.6, -- seconds before a player's last report stops counting
 	RepathInterval = 0.8, -- seconds between path recomputes
 	FreezeTime = 3, -- a caught player is frozen this long, then sent back to the counter

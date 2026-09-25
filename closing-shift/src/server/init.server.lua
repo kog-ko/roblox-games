@@ -70,10 +70,36 @@ task.spawn(RoundManager.Run)
 
 -- Flashlight on/off is cosmetic: store it so every client can draw the beam.
 local flashlightRemote = (remotes :: Instance):WaitForChild("Flashlight") :: RemoteEvent
+-- At most ten updates a second per player (each one reaches every client); a toggle that comes
+-- too fast isn't dropped, it's applied at the end of the window so the beam never desyncs.
+local lastToggle: { [Player]: number } = {}
+local pendingToggle: { [Player]: boolean } = {}
 flashlightRemote.OnServerEvent:Connect(function(player, on)
-	if typeof(on) == "boolean" then
-		player:SetAttribute("FlashlightOn", on)
+	if typeof(on) ~= "boolean" then
+		return
 	end
+	local remaining = 0.1 - (os.clock() - (lastToggle[player] or 0))
+	if remaining <= 0 then
+		lastToggle[player] = os.clock()
+		player:SetAttribute("FlashlightOn", on)
+		return
+	end
+	local scheduled = pendingToggle[player] ~= nil
+	pendingToggle[player] = on
+	if not scheduled then
+		task.delay(remaining, function()
+			local latest = pendingToggle[player]
+			pendingToggle[player] = nil
+			if latest ~= nil and player.Parent then
+				lastToggle[player] = os.clock()
+				player:SetAttribute("FlashlightOn", latest)
+			end
+		end)
+	end
+end)
+game:GetService("Players").PlayerRemoving:Connect(function(player)
+	lastToggle[player] = nil
+	pendingToggle[player] = nil
 end)
 
 -- Studio-only playtest commands. From the server command bar while playing, e.g.:

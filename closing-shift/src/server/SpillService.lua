@@ -450,6 +450,14 @@ function SpillService.Init(s: Instance)
 	store = s
 	folder = store:FindFirstChild("Spills") :: Instance
 	updateCount()
+	-- someone who leaves mid-mop: stop their squeak and forget their hold
+	game:GetService("Players").PlayerRemoving:Connect(function(player)
+		for _, spill in active do
+			stopSqueak(spill, player)
+			spill.Holds[player] = nil
+			spill.Finished[player] = nil
+		end
+	end)
 end
 
 return SpillService

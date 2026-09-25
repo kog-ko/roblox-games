@@ -15,6 +15,16 @@ It's a Rojo project. The whole store is built from Parts in code, so no `.rbxl` 
    ```
    If a `Store` already exists, the server uses it and only reapplies the lighting.
 
+## Publishing settings
+
+In Creator Hub (or Studio: Game Settings), set these for the experience:
+
+- **Max Players = 4.** The nights are tuned for a party of 1 to 4 sharing one set of spills, and the
+  Manager gets 15% faster for each extra player (`Config.Manager.SpeedPerExtraPlayer`).
+- **API Services on** (Security), so DataStores save progress, cash and purchases.
+- Passes, developer products and badges already exist and their IDs are in
+  `src/shared/Data/Monetization.lua`. An ID of 0 hides that item in game.
+
 ## Where things live
 
 | Studio location | Source | What it does |
@@ -23,7 +33,7 @@ It's a Rojo project. The whole store is built from Parts in code, so no `.rbxl` 
 | `ReplicatedStorage.Shared.Data.*` | `src/shared/Data/*.lua` | Content as data: `Nights`, `Events`, `Modifiers`, `Stores`, `Upgrades`, `Monetization` |
 | `ReplicatedStorage.Shared.Rules` | `src/shared/Rules.lua` | Resolves a night + modifiers into the numbers a shift runs on (server and clients) |
 | `ReplicatedStorage.Shared.Clock` | `src/shared/Clock.lua` | Maps shift seconds to the 2:00–6:00 AM clock |
-| `ReplicatedStorage.Remotes` | `default.project.json` | `ReadyUp`, `RequestCoffee`, `Results`, `PayoffCue`, `ShowNote`, `Flashlight`, `Cleaned` |
+| `ReplicatedStorage.Remotes` | `default.project.json` | Every RemoteEvent (the server also creates any that are missing). Client to server: `ReadyUp`, `PickNight`, `RequestCoffee`, `BuyUpgrade`, `RequestPurchase`, `Flashlight`, `ViewReport` (unreliable). All are validated and rate-limited on the server; the client never sends cash. |
 | `ServerScriptService.Server` | `src/server/init.server.lua` | Entry point and Studio-only `_G.ClosingShift` test commands |
 | `…Server.StoreBuilder` | `src/server/StoreBuilder.lua` | Store layout, props, materials, PSX lighting |
 | `…Server.RoundManager` | `src/server/RoundManager.lua` | Lobby → Shift → Payoff or Lights out → Results, driven by the night's rules |
@@ -31,15 +41,22 @@ It's a Rojo project. The whole store is built from Parts in code, so no `.rbxl` 
 | `…Server.EventDirector` | `src/server/EventDirector.lua` | Runs the night's events and power cuts |
 | `…Server.Events.*` | `src/server/Events/*.lua` | One module per "wrong" event, registered by file name |
 | `…Server.Payoff` | `src/server/Payoff.lua` | Back-room reveal and the note prompt |
-| `…Server.DataService` | `src/server/DataService.lua` | DataStore: best time, total cleaned, banked coffees |
+| `…Server.DataService` | `src/server/DataService.lua` | Versioned player profile (cash, unlocks, per-night bests, stats, upgrades, coffees, daily streak, receipts), merge-saved with UpdateAsync |
+| `…Server.Economy` | `src/server/Economy.lua` | Paycheck, daily bonus, locker upgrades; all cash goes through `AddCash` / `SpendCash` |
+| `…Server.Manager` | `src/server/Manager.lua` | The Night Manager: moves when nobody is looking, catches players |
+| `…Server.ServerBoosts` | `src/server/ServerBoosts.lua` | Server-wide paid boosts (Lights On, Janitor, Spill Storm, Manager Day Off) with a cooldown |
+| `…Server.ShiftBoard` | `src/server/ShiftBoard.lua` | The board in the break room where the party picks a night |
+| `…Server.Analytics` | `src/server/Analytics.lua` | AnalyticsService: onboarding funnel, economy events, custom events |
 | `…Server.Leaderboard` | `src/server/Leaderboard.lua` | OrderedDataStore top 10, drawn on the board by the counter |
-| `…Server.Badges` / `Monetization` / `Mop` | `src/server/*.lua` | Badge awards, pass/product handling, the Mop tool |
+| `…Server.Badges` / `Monetization` / `Mop` | `src/server/*.lua` | Badge awards; passes, products, gifts and receipts; the Mop tool |
 | `StarterPlayerScripts.Client` | `src/client/init.client.lua` | Starts the client modules below |
 | `…Client.Controls` / `Movement` | `src/client/*.lua` | Keyboard/gamepad/touch bindings; sprint + stamina (owns WalkSpeed) |
 | `…Client.CameraFx` / `Overlay` | `src/client/*.lua` | FOV, head-bob, camera snap; scanlines, pixel grid, vignette, flicker |
 | `…Client.Viewmodel` / `Flashlight` | `src/client/*.lua` | First-person mop; flashlight with battery |
 | `…Client.SoundFx` / `Juice` | `src/client/*.lua` | Ambient sound bed and stings; clean feedback (particles, +1, ka-ching) |
 | `…Client.Hud` / `Prompts` / `LightsFx` / `PayoffFx` | `src/client/*.lua` | HUD and results, prompt gating + touch MOP button, light flicker, payoff camera |
+| `…Client.Shop` / `Offers` / `Locker` | `src/client/*.lua` | Vending-machine shop; Second Chance, Clock In Late and Starter Pack offers; upgrade locker |
+| `…Client.NightPicker` / `Tutorial` / `ManagerView` / `CatchFx` | `src/client/*.lua` | Shift-board picker, first-night hints, camera view reports, the catch screen |
 
 ## Adding content
 
@@ -92,7 +109,13 @@ _G.ClosingShift.CleanAll()           -- clean every spill (tests the win, payoff
 _G.ClosingShift.CleanOne()
 _G.ClosingShift.Timeout()            -- end the shift now (tests the lose flow)
 _G.ClosingShift.Event("Mannequin")   -- SignGlitch, Footprints, DoorChime, IdenticalAisle, LightsOut, Mannequin
+_G.ClosingShift.ManagerDebug()       -- where the Manager is and who is watching it
 ```
+
+Set the workspace attribute `AnalyticsDebug` to true to print every analytics event while playing.
+
+Purchases: in Studio, Roblox shows a test purchase sheet (no Robux are charged) and the game grants
+the product as it would live.
 
 ## Sounds
 
