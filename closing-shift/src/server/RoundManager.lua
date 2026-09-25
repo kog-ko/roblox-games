@@ -14,12 +14,15 @@ local Badges = require(script.Parent.Badges)
 local Mop = require(script.Parent.Mop)
 local Manager = require(script.Parent.Manager)
 local Economy = require(script.Parent.Economy)
+local ServerBoosts = require(script.Parent.ServerBoosts)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
 local ReadyRemote = Remotes:WaitForChild("ReadyUp") :: RemoteEvent
 
 local RoundManager = {}
+-- Hook (set by Monetization): called per player after each shift's results, with won = true/false.
+RoundManager.OnShiftResult = nil :: ((Player, boolean) -> ())?
 local store: Instance
 local readyRequested = false
 local won = false
@@ -28,6 +31,8 @@ local finalCleaner: Player? = nil
 local skipTimer = false -- playtest helper: end the shift now
 local penalty = 0 -- seconds taken off this shift's clock (Manager catches)
 local shiftStart = 0
+local reviveRequested = false -- Clock In Late bought on the YOU'RE FIRED screen
+local revivedThisNight = false
 local night = Config.DefaultNight -- which night the next shift plays (the shift board sets this)
 local modifiers: { string } = {}
 
@@ -118,6 +123,8 @@ local function runLobby()
 	ReplicatedStorage:SetAttribute("Countdown", 0)
 end
 
+local shiftLoop: (Rules.Rules, number) -> number?
+
 -- Returns clean time in seconds, or nil if the clock ran out.
 local function runShift(rules: Rules.Rules): number?
 	won, finalCleaned, finalCleaner, skipTimer, penalty = false, false, nil, false, 0
@@ -136,12 +143,21 @@ local function runShift(rules: Rules.Rules): number?
 		Mop.Give(p)
 	end
 	SpillService.StartRound(rules.SpillCount)
-	local start = now()
+	revivedThisNight = false
+	return shiftLoop(rules, now())
+end
+
+-- Runs a shift from a (virtual) start time until it's won or the clock runs out.
+-- Returns clean time in seconds, or nil if the clock ran out.
+function shiftLoop(rules: Rules.Rules, start: number): number?
 	shiftStart = start
 	ReplicatedStorage:SetAttribute("ShiftStart", start)
 	ReplicatedStorage:SetAttribute("ShiftEndsAt", start + rules.ShiftLength)
 	EventDirector.Start(rules)
-	Manager.Start(rules)
+	if not ServerBoosts.IsDayOff() then
+		Manager.Start(rules)
+	end
+	ServerBoosts.OnShiftStart()
 
 	while not won and not skipTimer and now() < start + rules.ShiftLength - penalty do
 		task.wait(0.1)
@@ -192,6 +208,9 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 		end
 		Badges.Award(p, "FirstShift")
 		local pay = Economy.Paycheck(p, rules, cleanTime, finalCleaner == p)
+		if RoundManager.OnShiftResult then
+			task.spawn(RoundManager.OnShiftResult, p, cleanTime ~= nil)
+		end
 		task.spawn(DataService.Save, p)
 		local prof = DataService.Get(p)
 		ResultsRemote:FireClient(p, {
@@ -218,8 +237,54 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 	end
 	publishNight()
 	setPhase("Results")
-	task.wait(Config.ResultsTime)
+	-- YOU'RE FIRED: Clock In Late can be bought for a few seconds (once per night)
+	local offer = cleanTime == nil and not revivedThisNight and Config.Monetization.Products.ClockInLate ~= 0
+	local window = Config.Monetization.Rewards.ClockInLateWindow
+	ReplicatedStorage:SetAttribute("ReviveOfferUntil", if offer then workspace:GetServerTimeNow() + window else nil)
+	reviveRequested = false
+	local waitUntil = os.clock() + Config.ResultsTime
+	while os.clock() < waitUntil and not reviveRequested do
+		task.wait(0.1)
+	end
+	ReplicatedStorage:SetAttribute("ReviveOfferUntil", nil)
 	task.spawn(Leaderboard.Refresh, night)
+	return reviveRequested
+end
+
+-- Clock In Late: the night picks up again at 5:00 AM with half the floor spills gone.
+local function runRevive(rules: Rules.Rules): number?
+	revivedThisNight = true
+	night = rules.Night -- the loss moved nothing on, but make sure we replay the same night
+	publishNight()
+	won, skipTimer, penalty = false, false, 0
+	for _, p in Players:GetPlayers() do
+		-- the loss already paid for what was cleaned; count only new spills, and one shift worked
+		p:SetAttribute("Cleaned", 0)
+		DataService.Update(p, function(prof)
+			prof.Stats.ShiftsWorked = math.max(0, prof.Stats.ShiftsWorked - 1)
+		end)
+	end
+	store:SetAttribute("Power", true)
+	setPhase("Shift")
+	for _, p in Players:GetPlayers() do
+		Mop.Give(p)
+	end
+	SpillService.Resume(0.5)
+	-- a virtual start 3/4 of the way through the night puts the clock at 5:00 AM
+	return shiftLoop(rules, now() - rules.ShiftLength * 0.75)
+end
+
+-- Clock In Late was bought: returns true if the revive was accepted.
+function RoundManager.RequestRevive(): boolean
+	if ReplicatedStorage:GetAttribute("Phase") ~= "Results" or revivedThisNight then
+		return false
+	end
+	local untilT = ReplicatedStorage:GetAttribute("ReviveOfferUntil")
+	if type(untilT) ~= "number" or workspace:GetServerTimeNow() > untilT + 2 then
+		return false
+	end
+	reviveRequested = true
+	return true
 end
 
 -- Chooses the night for the next shift (clamped to the nights that exist).
@@ -264,6 +329,10 @@ function RoundManager.Init(s: Instance)
 		end)
 		RoundManager.AddPenalty(Config.Manager.TimePenalty)
 	end
+	Manager.OnUndoCatch = function(player: Player)
+		player:SetAttribute("CaughtThisShift", false)
+		RoundManager.AddPenalty(-Config.Manager.TimePenalty)
+	end
 	SpillService.OnCleaned = onCleaned
 	ReadyRemote.OnServerEvent:Connect(function()
 		if ReplicatedStorage:GetAttribute("Phase") == "Lobby" then
@@ -305,7 +374,15 @@ function RoundManager.Run()
 			warn("[Round] shift crashed:", result)
 			result = nil
 		end
-		runResults(rules, result)
+		local revive = runResults(rules, result)
+		while revive do
+			local ok2, result2 = pcall(runRevive, rules)
+			if not ok2 then
+				warn("[Round] revive crashed:", result2)
+				result2 = nil
+			end
+			revive = runResults(rules, result2)
+		end
 	end
 end
 

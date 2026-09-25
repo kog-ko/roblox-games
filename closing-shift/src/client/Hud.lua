@@ -3,7 +3,6 @@
 -- Chunky Arcade font, fixed pixel sizes that fit a landscape phone.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -90,7 +89,6 @@ function Hud.Start()
 	local countText = text(lobby, "Countdown", "SHIFT STARTS IN 15", UDim2.new(1, -20, 0, 24), UDim2.fromOffset(10, 106))
 	local bestText = text(lobby, "Best", "BEST: --", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 134))
 	local readyBtn = button(lobby, "Ready", "READY", UDim2.fromOffset(150, 50), UDim2.new(0.5, -6, 1, -10), Vector2.new(1, 1), Color3.fromRGB(120, 190, 110))
-	local mopBtn = button(lobby, "GoldMop", "GOLD MOP", UDim2.fromOffset(150, 50), UDim2.new(0.5, 6, 1, -10), Vector2.new(0, 1), Color3.fromRGB(215, 180, 70))
 
 	-- Results
 	local results = box(gui, "Results", UDim2.fromOffset(460, 420), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
@@ -129,14 +127,14 @@ function Hud.Start()
 		cashText.Text = "$" .. tostring(player:GetAttribute("Cash") or 0)
 		local best = player:GetAttribute("Best")
 		bestText.Text = if type(best) == "number" then "BEST: " .. Clock.Duration(best) else "BEST: --"
-		local passId = Config.GamePasses.IndustrialMop
-		mopBtn.Visible = passId ~= 0 and player:GetAttribute("IndustrialMop") ~= true
-		readyBtn.Position = if mopBtn.Visible then UDim2.new(0.5, -6, 1, -10) else UDim2.new(0.5, 75, 1, -10)
+		-- READY on the left, SHOP (added by Shop.lua) on the right
+		readyBtn.Position = UDim2.new(0.5, -6, 1, -10)
 		local credits = (player:GetAttribute("CoffeeCredits") or 0) :: number
 		local used = player:GetAttribute("CoffeeUsed") == true
 		local inShift = ReplicatedStorage:GetAttribute("Phase") == "Shift"
-		coffeeBtn.Visible = inShift and not used and (credits > 0 or Config.DevProducts.ExtraCoffee ~= 0)
-		coffeeBtn.Text = if credits > 0 then "COFFEE x" .. credits else "COFFEE"
+		-- banked coffees only: buying more happens in the shop, never mid-shift from the HUD
+		coffeeBtn.Visible = inShift and not used and credits > 0
+		coffeeBtn.Text = "COFFEE x" .. credits
 	end
 
 	local function refreshPhase()
@@ -199,15 +197,8 @@ function Hud.Start()
 		ReadyUp:FireServer()
 		readyBtn.Text = "READY!"
 	end)
-	mopBtn.Activated:Connect(function()
-		MarketplaceService:PromptGamePassPurchase(player, Config.GamePasses.IndustrialMop)
-	end)
 	coffeeBtn.Activated:Connect(function()
-		if ((player:GetAttribute("CoffeeCredits") or 0) :: number) > 0 then
-			RequestCoffee:FireServer()
-		elseif Config.DevProducts.ExtraCoffee ~= 0 then
-			MarketplaceService:PromptProductPurchase(player, Config.DevProducts.ExtraCoffee)
-		end
+		RequestCoffee:FireServer()
 	end)
 	noteClose.Activated:Connect(function()
 		note.Visible = false

@@ -340,6 +340,83 @@ function SpillService.StartRound(count: number)
 	updateCount()
 end
 
+-- Floor spills still on the floor (not the back-room one), for boosts that clean or count them.
+function SpillService.FloorSpills(): { Model }
+	local out = {}
+	for m, s in active do
+		if not s.IsFinal and not s.Done then
+			table.insert(out, m)
+		end
+	end
+	return out
+end
+
+-- Cleans one spill on someone's behalf (Hire a Janitor). Returns true if it was still there.
+function SpillService.CleanForPlayer(m: Model, player: Player): boolean
+	local s = active[m]
+	if not s or s.Done or not accepting then
+		return false
+	end
+	finish(s, player)
+	return true
+end
+
+-- Adds spills at free markers (Spill Storm). Returns how many were added.
+function SpillService.SpawnExtra(count: number): number
+	if not accepting or not finalPending then
+		return 0 -- only while the floor still has to be cleaned
+	end
+	local markers = (store:FindFirstChild("SpillMarkers") :: Instance):GetChildren()
+	for i = #markers, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		markers[i], markers[j] = markers[j], markers[i]
+	end
+	local added = 0
+	for _, mk in markers do
+		if added >= count then
+			break
+		end
+		local pos = (mk :: BasePart).Position
+		local free = true
+		for _, s in active do
+			if (s.Parts[1].Position - pos).Magnitude < 6 then
+				free = false
+				break
+			end
+		end
+		if free then
+			SpillService.Spawn(pos + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)))
+			added += 1
+		end
+	end
+	return added
+end
+
+-- Clock In Late: start accepting cleans again and clear away half of the floor spills left.
+function SpillService.Resume(keepFraction: number)
+	local floor = SpillService.FloorSpills()
+	local remove = #floor - math.ceil(#floor * keepFraction)
+	for i = 1, remove do
+		local s = active[floor[i]]
+		if s then
+			s.Done = true
+			active[floor[i]] = nil
+			floor[i]:Destroy()
+		end
+	end
+	accepting = true
+	updateCount()
+	-- if that emptied the floor, the back-room spill appears as usual
+	if next(active) == nil and finalPending then
+		finalPending = false
+		local marker = store:FindFirstChild("FinalSpillMarker", true) :: BasePart
+		SpillService.Spawn(marker.Position, true)
+		if SpillService.OnFinalSpawned then
+			SpillService.OnFinalSpawned()
+		end
+	end
+end
+
 function SpillService.IsFinalPhase(): boolean
 	return not finalPending
 end

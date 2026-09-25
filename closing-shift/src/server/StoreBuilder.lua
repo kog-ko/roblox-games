@@ -586,6 +586,30 @@ local function buildBreakRoom(store: Instance)
 	local vip = part({ Name = "VIPSign", Size = Vector3.new(2.8, 0.7, 0.05), Position = Vector3.new(-36.2, 7.6, 6.2), Material = M.Neon, Color = Color3.fromRGB(215, 175, 60), CanCollide = false, Parent = b })
 	label(surfaceGui(vip, Enum.NormalId.Front, 50), "STAFF LOUNGE - VIP", { TextColor3 = Color3.fromRGB(40, 30, 10) })
 	tube(b, "BreakRoomTube", Vector3.new(-38, H - 0.3, -1), 6, "FluorescentTube", true)
+
+	-- VIP lounge behind the VIP door (VIPs are teleported in; see Monetization.lua)
+	local v = model("VIPLounge", b)
+	local gold = Color3.fromRGB(215, 175, 60)
+	part({ Name = "Floor", Size = Vector3.new(15, 1, 10), Position = Vector3.new(-38, -0.5, 12.5), Material = M.Carpet, Color = Color3.fromRGB(90, 25, 35), Parent = v })
+	part({ Name = "Ceiling", Size = Vector3.new(15, 1, 10), Position = Vector3.new(-38, H + 0.5, 12.5), Material = M.Plaster, Color = Color3.fromRGB(60, 40, 40), Parent = v })
+	part({ Name = "NorthWall", Size = Vector3.new(16, H, 1), Position = Vector3.new(-38, H / 2, 18), Material = M.WoodPlanks, Color = Color3.fromRGB(80, 50, 35), Parent = v })
+	part({ Name = "WestWall", Size = Vector3.new(1, H, 11), Position = Vector3.new(-46, H / 2, 12.5), Material = M.WoodPlanks, Color = Color3.fromRGB(80, 50, 35), Parent = v })
+	part({ Name = "EastWall", Size = Vector3.new(0.5, H, 11), Position = Vector3.new(-31.25, H / 2, 12.5), Material = M.WoodPlanks, Color = Color3.fromRGB(80, 50, 35), Parent = v })
+	part({ Name = "GoldTrim", Size = Vector3.new(15, 0.3, 0.2), Position = Vector3.new(-38, 3, 17.4), Material = M.Metal, Color = gold, CanCollide = false, Parent = v })
+	part({ Name = "Couch", Size = Vector3.new(7, 1.6, 2.4), Position = Vector3.new(-38, 0.8, 16), Material = M.Leather, Color = Color3.fromRGB(40, 25, 20), Parent = v })
+	part({ Name = "CouchBack", Size = Vector3.new(7, 2, 0.8), Position = Vector3.new(-38, 2.2, 17), Material = M.Leather, Color = Color3.fromRGB(40, 25, 20), Parent = v })
+	part({ Name = "CoffeeTable", Size = Vector3.new(3, 0.3, 1.6), Position = Vector3.new(-38, 1.5, 13), Material = M.Marble, Color = Color3.fromRGB(230, 225, 215), Parent = v })
+	local tv = poweredNeon({ Name = "TV", Size = Vector3.new(0.2, 3, 5), Position = Vector3.new(-45.4, 5, 12.5), Color = Color3.fromRGB(60, 90, 140), CanCollide = false, Parent = v }, Color3.fromRGB(120, 150, 220), 12)
+	label(surfaceGui(tv, Enum.NormalId.Right, 30), "EMPLOYEE\nOF THE MONTH", { TextColor3 = Color3.fromRGB(255, 225, 150) })
+	local lamp = part({ Name = "GoldLamp", Shape = Enum.PartType.Ball, Size = Vector3.new(1.2, 1.2, 1.2), Position = Vector3.new(-33, 4, 16.5), Material = M.Neon, Color = Color3.fromRGB(255, 210, 120), CanCollide = false, Parent = v })
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 200, 120)
+	glow.Range = 16
+	glow.Brightness = 1.2
+	glow.Parent = lamp
+	part({ Name = "VIPLoungeSpawn", Size = Vector3.new(2, 0.2, 2), Position = Vector3.new(-38, 0.1, 10), Transparency = 1, CanCollide = false, CanQuery = false, Parent = v })
+	local exitDoor = part({ Name = "VIPLoungeExit", Size = Vector3.new(3, 7, 0.3), Position = Vector3.new(-36.2, 3.5, 7.6), Material = M.Wood, Color = Color3.fromRGB(60, 45, 30), Parent = v })
+	label(surfaceGui(exitDoor, Enum.NormalId.Back, 40), "EXIT", { Size = UDim2.fromScale(1, 0.12), TextColor3 = gold })
 end
 
 local function buildLights(store: Instance)

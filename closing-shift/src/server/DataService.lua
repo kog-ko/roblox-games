@@ -21,8 +21,14 @@ export type Profile = {
 	Upgrades: { [string]: number }, -- upgrade id -> tier bought (0 = none)
 	CoffeeCredits: number,
 	Daily: { LastDay: number, Streak: number },
+	Receipts: { [string]: number }, -- processed purchase ids -> os.time() (idempotent grants)
+	GiftedPasses: { [string]: boolean }, -- passes received as gifts
+	Starter: { OfferUntil: number, Bought: boolean }, -- Starter Pack offer window (0 = never offered)
+	DoublePayUntil: number, -- os.time() when a 2x paycheck boost ends
 	LoadFailed: boolean?,
 }
+
+local MAX_RECEIPTS = 100
 
 local DataService = {}
 -- Called after a player's profile is loaded (other services apply upgrades, passes, etc.).
@@ -84,7 +90,28 @@ local function blank(): Profile
 		Upgrades = {},
 		CoffeeCredits = 0,
 		Daily = { LastDay = 0, Streak = 0 },
+		Receipts = {},
+		GiftedPasses = {},
+		Starter = { OfferUntil = 0, Bought = false },
+		DoublePayUntil = 0,
 	}
+end
+
+-- Keeps only the newest receipts so the profile can't grow without limit.
+local function trimReceipts(r: { [string]: number })
+	local list = {}
+	for id, t in r do
+		table.insert(list, { id = id, t = t })
+	end
+	if #list <= MAX_RECEIPTS then
+		return
+	end
+	table.sort(list, function(a, b)
+		return a.t > b.t
+	end)
+	for i = MAX_RECEIPTS + 1, #list do
+		r[list[i].id] = nil
+	end
 end
 
 -- Turns whatever is stored (any version) into a current profile.
@@ -129,6 +156,25 @@ local function fromStored(data: any): Profile
 		p.Daily.LastDay = tonumber(data.Daily.LastDay) or 0
 		p.Daily.Streak = tonumber(data.Daily.Streak) or 0
 	end
+	if type(data.Receipts) == "table" then
+		for k, v in data.Receipts do
+			if type(v) == "number" then
+				p.Receipts[tostring(k)] = v
+			end
+		end
+	end
+	if type(data.GiftedPasses) == "table" then
+		for k, v in data.GiftedPasses do
+			if v == true then
+				p.GiftedPasses[tostring(k)] = true
+			end
+		end
+	end
+	if type(data.Starter) == "table" then
+		p.Starter.OfferUntil = tonumber(data.Starter.OfferUntil) or 0
+		p.Starter.Bought = data.Starter.Bought == true
+	end
+	p.DoublePayUntil = tonumber(data.DoublePayUntil) or 0
 	return p
 end
 
@@ -139,6 +185,8 @@ local function publish(player: Player, p: Profile)
 	player:SetAttribute("TotalCleaned", p.Stats.TotalCleaned)
 	player:SetAttribute("CoffeeCredits", p.CoffeeCredits)
 	player:SetAttribute("DailyStreak", p.Daily.Streak)
+	player:SetAttribute("DoublePayUntil", if p.DoublePayUntil > 0 then p.DoublePayUntil else nil)
+	player:SetAttribute("StarterOfferUntil", if p.Starter.OfferUntil > 0 and not p.Starter.Bought then p.Starter.OfferUntil else nil)
 	local night = game:GetService("ReplicatedStorage"):GetAttribute("Night") or 1
 	player:SetAttribute("Best", p.BestByNight[tostring(night)])
 	for id in Config.Upgrades do
@@ -215,10 +263,53 @@ function DataService.Save(player: Player): boolean
 			for k, v in p.Upgrades do
 				out.Upgrades[k] = math.max(v, old.Upgrades[k] or 0)
 			end
+			-- purchases and gifts are never lost
+			for k, v in old.Receipts do
+				out.Receipts[k] = v
+			end
+			for k, v in p.Receipts do
+				out.Receipts[k] = v
+			end
+			trimReceipts(out.Receipts)
+			for k in old.GiftedPasses do
+				out.GiftedPasses[k] = true
+			end
+			for k in p.GiftedPasses do
+				out.GiftedPasses[k] = true
+			end
+			out.Starter = {
+				OfferUntil = math.max(p.Starter.OfferUntil, old.Starter.OfferUntil),
+				Bought = p.Starter.Bought or old.Starter.Bought,
+			}
+			out.DoublePayUntil = math.max(p.DoublePayUntil, old.DoublePayUntil)
 			return out
 		end)
 	end)
 	return saved
+end
+
+-- True when purchases and progress are really being saved. In Studio without API access this is
+-- false; Monetization then grants test purchases without the idempotency write.
+function DataService.IsSaving(): boolean
+	return store ~= nil and not disabled
+end
+
+-- Applies fn to a player's stored profile when they aren't in this server (gifts to someone who
+-- left before the purchase finished). Returns true if the write succeeded.
+function DataService.GrantOffline(userId: number, fn: (Profile) -> ()): boolean
+	if not store or disabled then
+		return false
+	end
+	local s = store :: DataStore
+	local ok = retry("grant " .. userId, function()
+		s:UpdateAsync(tostring(userId), function(stored)
+			local p = fromStored(stored)
+			fn(p)
+			trimReceipts(p.Receipts)
+			return p
+		end)
+	end)
+	return ok
 end
 
 function DataService.Init()

@@ -17,8 +17,12 @@ local CaughtRemote = Remotes:WaitForChild("Caught") :: RemoteEvent
 
 local C = Config.Manager
 local Manager = {}
--- Set by RoundManager: called with the caught player.
+-- Set by RoundManager: called with the caught player, and when a catch is undone (Second Chance).
 Manager.OnCatch = nil :: ((Player) -> ())?
+Manager.OnUndoCatch = nil :: ((Player) -> ())?
+
+type CatchRecord = { pos: CFrame, t: number, undone: boolean }
+local catches: { [Player]: CatchRecord } = {}
 
 type View = { cf: CFrame, t: number }
 local views: { [Player]: View } = {}
@@ -30,6 +34,7 @@ local runId = 0
 local waypoints: { Vector3 } = {}
 local cooldownUntil = 0
 local watchedBy: { string } = {}
+local frozenUntil = 0 -- Lights On boost
 local isWatched = false
 local walking = false
 local sinceCheck = math.huge -- sight checks run ~10x a second, movement every frame
@@ -197,7 +202,11 @@ end
 
 local function catch(player: Player)
 	print("[Manager] caught", player.Name)
+	local here = player.Character and player.Character:GetPivot() or CFrame.new()
+	local record: CatchRecord = { pos = here, t = os.clock(), undone = false }
+	catches[player] = record
 	player:SetAttribute("Caught", true)
+	player:SetAttribute("CaughtAt", workspace:GetServerTimeNow())
 	CaughtRemote:FireAllClients(player)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if root then
@@ -213,6 +222,9 @@ local function catch(player: Player)
 	end
 	cooldownUntil = os.clock() + C.CooldownAfterCatch
 	task.delay(C.FreezeTime, function()
+		if record.undone then
+			return -- Second Chance already put them back
+		end
 		local sp = store:FindFirstChild("SpawnPoint") :: BasePart?
 		local char = player.Character
 		if char and sp then
@@ -236,7 +248,7 @@ local function step(dt: number)
 		isWatched = watched()
 		m:SetAttribute("Watched", isWatched)
 	end
-	local canMove = not isWatched and os.clock() >= cooldownUntil and #waypoints > 0
+	local canMove = not isWatched and os.clock() >= cooldownUntil and os.clock() >= frozenUntil and #waypoints > 0
 	if canMove ~= walking then
 		walking = canMove
 		local steps = m.PrimaryPart and m.PrimaryPart:FindFirstChild("Steps") :: Sound?
@@ -291,6 +303,7 @@ function Manager.Start(rules: any)
 	cooldownUntil = os.clock() + 5 -- a few seconds' grace at the start of the shift
 	isWatched = false
 	walking = false
+	frozenUntil = 0
 	sinceCheck = math.huge
 	local m = build()
 	m:PivotTo(CFrame.new(C.Spawn))
@@ -320,6 +333,41 @@ function Manager.Stop()
 			end
 		end
 	end
+end
+
+-- Second Chance: undoes this player's latest catch if it was recent enough. They're put back where
+-- they were caught (no respawn) and the lost time is returned (OnUndoCatch).
+function Manager.UndoCatch(player: Player, window: number): boolean
+	local rec = catches[player]
+	if not rec or rec.undone or os.clock() - rec.t > window then
+		return false
+	end
+	rec.undone = true
+	local char = player.Character
+	if char then
+		char:PivotTo(rec.pos)
+		local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if root then
+			root.Anchored = false
+		end
+	end
+	player:SetAttribute("Caught", false)
+	player:SetAttribute("CaughtAt", nil)
+	if Manager.OnUndoCatch then
+		Manager.OnUndoCatch(player)
+	end
+	-- give them a moment before he can move again
+	cooldownUntil = math.max(cooldownUntil, os.clock() + C.CooldownAfterCatch)
+	return true
+end
+
+-- Lights On boost: he can't move for this long.
+function Manager.Freeze(seconds: number)
+	frozenUntil = math.max(frozenUntil, os.clock() + seconds)
+end
+
+function Manager.IsActive(): boolean
+	return model ~= nil
 end
 
 -- Playtest helpers.

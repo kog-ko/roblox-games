@@ -14,6 +14,7 @@ local EventDirector = {}
 local store: Instance
 local runId = 0
 local powerHolds = 0
+local forcedOn = false -- Lights On boost: power cuts can't take the lights while this is set
 local rng = Random.new()
 
 -- What every event module receives.
@@ -80,7 +81,7 @@ end
 -- Returns the release function.
 local function cutPower(): () -> ()
 	powerHolds += 1
-	if powerHolds == 1 then
+	if powerHolds == 1 and not forcedOn then
 		store:SetAttribute("Power", false)
 		playSound(store:FindFirstChild("Lights") :: Instance, Config.Sounds.Buzz, 0.7)
 	end
@@ -211,7 +212,21 @@ function EventDirector.Cleanup()
 	local props = store:FindFirstChild("EventProps") :: Instance
 	props:ClearAllChildren()
 	powerHolds = 0
+	forcedOn = false
 	store:SetAttribute("Power", true)
+end
+
+-- Lights On boost: every light on for this long, whatever the power cuts are doing.
+function EventDirector.ForcePowerOn(seconds: number)
+	forcedOn = true
+	store:SetAttribute("Power", true)
+	local myRun = runId
+	task.delay(seconds, function()
+		forcedOn = false
+		if myRun == runId and powerHolds > 0 then
+			store:SetAttribute("Power", false) -- a cut is still running underneath
+		end
+	end)
 end
 
 -- For playtesting: run one event by name right now.

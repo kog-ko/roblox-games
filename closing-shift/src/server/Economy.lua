@@ -64,6 +64,9 @@ function Economy.ApplyUpgrades(player: Player)
 	for id, u in Config.Upgrades do
 		local tier = p.Upgrades[id] or 0
 		local value = if tier > 0 then u.Tiers[tier].Value else 1
+		if u.Stat == "BatteryMult" and player:GetAttribute("BigFlashlight") then
+			value *= Config.Monetization.Rewards.BigFlashlightBattery -- stacks with the pass
+		end
 		player:SetAttribute(u.Stat, value)
 	end
 end
