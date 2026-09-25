@@ -9,7 +9,7 @@ if not remotes then
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
 end
-for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned" } do
+for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name
@@ -34,6 +34,7 @@ local EventDirector = require(script.EventDirector)
 local Payoff = require(script.Payoff)
 local Monetization = require(script.Monetization)
 local RoundManager = require(script.RoundManager)
+local ShiftBoard = require(script.ShiftBoard)
 
 DataService.Init()
 Leaderboard.Init(s)
@@ -42,6 +43,7 @@ EventDirector.Init(s)
 Payoff.Init(s)
 Monetization.Init()
 RoundManager.Init(s)
+ShiftBoard.Init(s)
 task.spawn(RoundManager.Run)
 
 -- Flashlight on/off is cosmetic: store it so every client can draw the beam.

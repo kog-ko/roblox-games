@@ -79,16 +79,17 @@ function Hud.Start()
 	local coffeeBtn = button(bar, "Coffee", "COFFEE", UDim2.fromOffset(130, 46), UDim2.new(1, -12, 0.42, 0), Vector2.new(1, 0.5), Color3.fromRGB(190, 140, 80))
 
 	-- Lobby panel
-	local lobby = box(gui, "Lobby", UDim2.fromOffset(340, 200), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0))
+	local lobby = box(gui, "Lobby", UDim2.fromOffset(340, 226), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0))
 	text(lobby, "Title", "CLOSING SHIFT", UDim2.new(1, -20, 0, 42), UDim2.fromOffset(10, 8), RED)
-	text(lobby, "Goal", "MOP EVERY SPILL BEFORE 6:00 AM", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 54))
-	local countText = text(lobby, "Countdown", "SHIFT STARTS IN 15", UDim2.new(1, -20, 0, 24), UDim2.fromOffset(10, 80))
-	local bestText = text(lobby, "Best", "BEST: --", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 108))
+	local nightText = text(lobby, "Night", "NIGHT 1", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 54), Color3.fromRGB(255, 215, 90))
+	text(lobby, "Goal", "MOP EVERY SPILL BEFORE 6:00 AM", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 80))
+	local countText = text(lobby, "Countdown", "SHIFT STARTS IN 15", UDim2.new(1, -20, 0, 24), UDim2.fromOffset(10, 106))
+	local bestText = text(lobby, "Best", "BEST: --", UDim2.new(1, -20, 0, 18), UDim2.fromOffset(10, 134))
 	local readyBtn = button(lobby, "Ready", "READY", UDim2.fromOffset(150, 50), UDim2.new(0.5, -6, 1, -10), Vector2.new(1, 1), Color3.fromRGB(120, 190, 110))
 	local mopBtn = button(lobby, "GoldMop", "GOLD MOP", UDim2.fromOffset(150, 50), UDim2.new(0.5, 6, 1, -10), Vector2.new(0, 1), Color3.fromRGB(215, 180, 70))
 
 	-- Results
-	local results = box(gui, "Results", UDim2.fromOffset(420, 260), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
+	local results = box(gui, "Results", UDim2.fromOffset(460, 330), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
 	local resTitle = text(results, "Title", "", UDim2.new(1, -20, 0, 70), UDim2.fromOffset(10, 10))
 	local resBody = text(results, "Body", "", UDim2.new(1, -30, 1, -100), UDim2.fromOffset(15, 90))
 	resBody.TextXAlignment = Enum.TextXAlignment.Left
@@ -147,6 +148,15 @@ function Hud.Start()
 		end
 		refreshCounts()
 	end
+
+	local function refreshNight()
+		local n = ReplicatedStorage:GetAttribute("Night") or 1
+		local name = ReplicatedStorage:GetAttribute("NightName") or ""
+		nightText.Text = string.format("NIGHT %d: %s", n, string.upper(tostring(name)))
+	end
+	ReplicatedStorage:GetAttributeChangedSignal("Night"):Connect(refreshNight)
+	ReplicatedStorage:GetAttributeChangedSignal("NightName"):Connect(refreshNight)
+	refreshNight()
 
 	ReplicatedStorage:GetAttributeChangedSignal("Phase"):Connect(refreshPhase)
 	ReplicatedStorage:GetAttributeChangedSignal("SpillsRemaining"):Connect(refreshCounts)
@@ -215,6 +225,11 @@ function Hud.Start()
 			resBody.Text = string.format("CLEAN TIME   %s%s\nBEST         %s\n\nYOU CLEANED  %d\nTEAM CLEANED %d\nLIFETIME     %d",
 				Clock.Duration(r.CleanTime), if r.NewBest then "  NEW BEST!" else "",
 				if r.Best then Clock.Duration(r.Best) else "--", r.Cleaned, r.TeamCleaned, r.TotalCleaned)
+		end
+		if r.Final then
+			resBody.Text ..= string.format("\n\nNIGHTS 4-5 COMING SOON.\nLIKE THE GAME TO UNLOCK THEM FASTER!\nLIKE GOAL: %s", tostring(Config.LikeGoal))
+		elseif r.Outcome ~= "Fired" and type(r.Tease) == "string" and r.Tease ~= "" then
+			resBody.Text ..= "\n\n" .. string.upper(r.Tease)
 		end
 	end)
 	ShowNote.OnClientEvent:Connect(function()

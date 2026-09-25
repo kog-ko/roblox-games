@@ -16,6 +16,7 @@ Config.Stores = require(Data:WaitForChild("Stores"))
 Config.Upgrades = require(Data:WaitForChild("Upgrades"))
 Config.Monetization = require(Data:WaitForChild("Monetization"))
 Config.DefaultNight = 1
+Config.LikeGoal = 1000 -- shown after Night 3: "Like the game to unlock Nights 4-5 faster!"
 Config.DefaultStore = "QuikStop"
 
 -- Round flow (seconds). Shift length and spill count are per night (Data/Nights).

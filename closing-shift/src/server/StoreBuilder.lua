@@ -749,6 +749,29 @@ local function buildLeaderboard(store: Instance)
 	list.TextWrapped = false
 end
 
+-- Shift board by the spawn: the party picks tonight's night here (ShiftBoard.lua fills it in).
+local function buildShiftBoard(store: Instance)
+	local m = model("ShiftBoard", store)
+	for _, dx in { -2.2, 2.2 } do
+		part({ Name = "Leg", Size = Vector3.new(0.25, 6.5, 0.25), Position = Vector3.new(-26 + dx, 3.25, 18.4), Material = M.Metal, Color = DARK_STEEL, Parent = m })
+	end
+	local board = part({ Name = "Board", Size = Vector3.new(5, 3.6, 0.2), Position = Vector3.new(-26, 4.8, 18.3), Material = M.Fabric, Color = Color3.fromRGB(120, 90, 60), Parent = m })
+	local g = surfaceGui(board, Enum.NormalId.Front, 50)
+	g.Name = "BoardGui"
+	g.LightInfluence = 0.3
+	label(g, "SHIFT BOARD", { Name = "Title", Size = UDim2.fromScale(1, 0.2), TextColor3 = Color3.fromRGB(240, 225, 180) })
+	local list = Instance.new("Frame")
+	list.Name = "List"
+	list.BackgroundTransparency = 1
+	list.Position = UDim2.fromScale(0.05, 0.22)
+	list.Size = UDim2.fromScale(0.9, 0.62)
+	list.Parent = g
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = list
+	label(g, "", { Name = "Footer", Position = UDim2.fromScale(0, 0.86), Size = UDim2.fromScale(1, 0.12), TextColor3 = Color3.fromRGB(230, 210, 150) })
+end
+
 function StoreBuilder.SetupLighting()
 	Lighting.ClockTime = 1
 	Lighting.Brightness = 0.4
@@ -807,6 +830,7 @@ function StoreBuilder.Build(): Model
 	buildBackRoom(store)
 	buildSpillMarkers(store)
 	buildLeaderboard(store)
+	buildShiftBoard(store)
 	folder("Spills", store)
 	folder("EventProps", store)
 	store:SetAttribute("Power", true)

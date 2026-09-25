@@ -27,12 +27,29 @@ local skipTimer = false -- playtest helper: end the shift now
 local night = Config.DefaultNight -- which night the next shift plays (the shift board sets this)
 local modifiers: { string } = {}
 
+-- The highest night the whole party can play: the lowest "Unlocked" among players whose data
+-- has loaded (players still loading don't hold everyone back).
+local function groupUnlocked(): number
+	local lowest = math.huge
+	for _, p in Players:GetPlayers() do
+		local u = p:GetAttribute("Unlocked")
+		if type(u) == "number" then
+			lowest = math.min(lowest, u)
+		end
+	end
+	if lowest == math.huge then
+		lowest = 1
+	end
+	return math.clamp(lowest, 1, Rules.NightCount())
+end
+
 -- Publishes the upcoming night so the lobby, HUD and clock can show it.
 local function publishNight()
 	local r = Rules.Resolve(night, modifiers)
 	ReplicatedStorage:SetAttribute("Night", r.Night)
 	ReplicatedStorage:SetAttribute("NightName", r.Name)
 	ReplicatedStorage:SetAttribute("ShiftLength", r.ShiftLength)
+	ReplicatedStorage:SetAttribute("GroupUnlocked", groupUnlocked())
 end
 
 local function setPhase(p: string)
@@ -80,6 +97,10 @@ local function runLobby()
 		end)
 	end
 	readyRequested = false
+	if night > groupUnlocked() then
+		night = groupUnlocked()
+	end
+	publishNight()
 	local deadline = os.clock() + Config.IntermissionTime
 	while true do
 		if #Players:GetPlayers() == 0 then
@@ -138,9 +159,14 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 	for _, p in Players:GetPlayers() do
 		teamCleaned += (p:GetAttribute("Cleaned") or 0) :: number
 	end
+	local final = cleanTime ~= nil and rules.Night >= Rules.NightCount()
 	for _, p in Players:GetPlayers() do
 		local newBest = false
 		if cleanTime then
+			-- beating a night unlocks the next one
+			DataService.Update(p, function(prof)
+				prof.Unlocked = math.max(prof.Unlocked, math.min(rules.Night + 1, Rules.NightCount()))
+			end)
 			DataService.Update(p, function(prof)
 				if prof.Best == nil or cleanTime < (prof.Best :: number) then
 					prof.Best = cleanTime
@@ -165,8 +191,16 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 			Night = rules.Night,
 			NightName = rules.Name,
 			Tease = rules.Tease,
+			Final = final,
 		})
 	end
+	-- a win moves the party on to the next night (if everyone has it); a loss replays this one
+	if cleanTime then
+		night = math.min(rules.Night + 1, groupUnlocked(), Rules.NightCount())
+	else
+		night = math.min(rules.Night, groupUnlocked())
+	end
+	publishNight()
 	setPhase("Results")
 	task.wait(Config.ResultsTime)
 	task.spawn(Leaderboard.Refresh)
@@ -180,6 +214,10 @@ end
 
 function RoundManager.GetNight(): number
 	return night
+end
+
+function RoundManager.GroupUnlocked(): number
+	return groupUnlocked()
 end
 
 -- Playtest helpers (call from the server command bar while playing).
@@ -208,6 +246,7 @@ function RoundManager.Init(s: Instance)
 		end
 	end
 	local function onPlayer(player: Player)
+		player:GetAttributeChangedSignal("Unlocked"):Connect(publishNight)
 		player:SetAttribute("Cleaned", 0)
 		player.CameraMode = Enum.CameraMode.LockFirstPerson
 		player.CharacterAdded:Connect(function(char)
@@ -215,6 +254,9 @@ function RoundManager.Init(s: Instance)
 		end)
 	end
 	Players.PlayerAdded:Connect(onPlayer)
+	Players.PlayerRemoving:Connect(function()
+		task.defer(publishNight)
+	end)
 	for _, p in Players:GetPlayers() do
 		onPlayer(p)
 	end

@@ -1,12 +1,12 @@
 --!strict
--- Saves best clean time, total spills cleaned and banked coffees per player.
+-- Saves best clean time, total spills cleaned, banked coffees and the highest night unlocked per player.
 -- Every DataStore call is pcall'd and retried. If Studio has no API access, saving is
 -- switched off for the session (one warning) so playtests stay quiet.
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 
-export type Profile = { Best: number?, TotalCleaned: number, CoffeeCredits: number, LoadFailed: boolean? }
+export type Profile = { Best: number?, TotalCleaned: number, CoffeeCredits: number, Unlocked: number, LoadFailed: boolean? }
 
 local DataService = {}
 local profiles: { [Player]: Profile } = {}
@@ -23,7 +23,8 @@ end
 
 local function isApiBlocked(err: any): boolean
 	local msg = tostring(err)
-	return msg:find("StudioAccessToApisNotAllowed") ~= nil or msg:find("publish") ~= nil or msg:find("403") ~= nil
+	return msg:find("StudioAccessToApisNotAllowed") ~= nil or msg:find("Studio access to APIs") ~= nil
+		or msg:find("publish") ~= nil or msg:find("403") ~= nil
 end
 
 -- Runs fn with pcall, retrying with backoff. Returns ok, result.
@@ -59,10 +60,11 @@ local function publish(player: Player, p: Profile)
 	player:SetAttribute("Best", p.Best)
 	player:SetAttribute("TotalCleaned", p.TotalCleaned)
 	player:SetAttribute("CoffeeCredits", p.CoffeeCredits)
+	player:SetAttribute("Unlocked", p.Unlocked)
 end
 
 function DataService.Load(player: Player)
-	local profile: Profile = { Best = nil, TotalCleaned = 0, CoffeeCredits = 0 }
+	local profile: Profile = { Best = nil, TotalCleaned = 0, CoffeeCredits = 0, Unlocked = 1 }
 	if store and not disabled then
 		local s = store :: DataStore
 		local loaded, data = retry("load " .. player.UserId, function()
@@ -72,6 +74,7 @@ function DataService.Load(player: Player)
 			profile.Best = data.Best
 			profile.TotalCleaned = data.TotalCleaned or 0
 			profile.CoffeeCredits = data.CoffeeCredits or 0
+			profile.Unlocked = math.max(1, data.Unlocked or 1)
 		elseif not loaded and not disabled then
 			profile.LoadFailed = true -- don't overwrite real data with blanks
 		end
@@ -111,6 +114,7 @@ function DataService.Save(player: Player): boolean
 				Best = best,
 				TotalCleaned = math.max(p.TotalCleaned, old.TotalCleaned or 0),
 				CoffeeCredits = p.CoffeeCredits,
+				Unlocked = math.max(p.Unlocked, old.Unlocked or 1),
 			}
 		end)
 	end)
