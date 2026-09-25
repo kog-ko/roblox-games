@@ -15,7 +15,9 @@
         "ShowNote": { "$className": "RemoteEvent" },
         "Flashlight": { "$className": "RemoteEvent" },
         "Cleaned": { "$className": "RemoteEvent" },
-        "PickNight": { "$className": "RemoteEvent" }
+        "PickNight": { "$className": "RemoteEvent" },
+        "Caught": { "$className": "RemoteEvent" },
+        "ViewReport": { "$className": "UnreliableRemoteEvent" }
       }
     },
     "ServerScriptService": {

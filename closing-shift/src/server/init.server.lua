@@ -9,7 +9,7 @@ if not remotes then
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
 end
-for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight" } do
+for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight", "Caught" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name
@@ -18,6 +18,12 @@ for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote",
 end
 
 local Config = require(ReplicatedStorage.Shared.Config)
+if not (remotes :: Instance):FindFirstChild("ViewReport") then
+	local r = Instance.new("UnreliableRemoteEvent")
+	r.Name = "ViewReport"
+	r.Parent = remotes
+end
+
 local StoreBuilder = require(script:FindFirstChild(Config.Stores[Config.DefaultStore].Builder) :: ModuleScript)
 local store = workspace:FindFirstChild("Store")
 if not store then
@@ -33,6 +39,7 @@ local SpillService = require(script.SpillService)
 local EventDirector = require(script.EventDirector)
 local Payoff = require(script.Payoff)
 local Monetization = require(script.Monetization)
+local Manager = require(script.Manager)
 local RoundManager = require(script.RoundManager)
 local ShiftBoard = require(script.ShiftBoard)
 
@@ -42,6 +49,7 @@ SpillService.Init(s)
 EventDirector.Init(s)
 Payoff.Init(s)
 Monetization.Init()
+Manager.Init(s)
 RoundManager.Init(s)
 ShiftBoard.Init(s)
 task.spawn(RoundManager.Run)
@@ -63,6 +71,9 @@ if game:GetService("RunService"):IsStudio() then
 		Timeout = RoundManager.ForceTimeout,
 		Event = EventDirector.Force,
 		Night = RoundManager.SetNight, -- _G.ClosingShift.Night(2) plays night 2 next
+		ManagerPlace = Manager.PlaceAt, -- _G.ClosingShift.ManagerPlace(Vector3.new(0, 0, 10))
+		ManagerDebug = Manager.Debug, -- position, watched, who is watching
+		ViewOf = Manager.ViewOf, -- a player's last reported camera CFrame
 		CleanOne = function()
 			local p = Players:GetPlayers()[1]
 			return p and SpillService.DebugCleanOne(p)

@@ -89,6 +89,21 @@ Config.PSX = {
 	FogHaze = 3,
 }
 
+-- The Night Manager (speed is per night in Data/Nights)
+Config.Manager = {
+	CatchDistance = 3.5, -- studs (flat) that count as caught
+	ViewDistance = 110, -- beyond this he's lost in the fog
+	ViewConeDegrees = 48, -- half-angle of the view cone that counts as "on screen"
+	ReportInterval = 0.1, -- how often each client sends its camera view
+	ReportMaxOffset = 6, -- a report further than this from the player's head is ignored
+	ReportMaxAge = 0.6, -- seconds before a player's last report stops counting
+	RepathInterval = 0.8, -- seconds between path recomputes
+	FreezeTime = 3, -- a caught player is frozen this long, then sent back to the counter
+	TimePenalty = 30, -- seconds taken off the shift clock per catch
+	CooldownAfterCatch = 4, -- he waits this long in the back room after a catch
+	Spawn = Vector3.new(44, 0, -7), -- back room, by the door
+}
+
 -- Flashlight (F / touch). Battery drains while on and slowly recharges while off.
 Config.Flashlight = {
 	Brightness = 3,

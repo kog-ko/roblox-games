@@ -12,6 +12,7 @@ local DataService = require(script.Parent.DataService)
 local Leaderboard = require(script.Parent.Leaderboard)
 local Badges = require(script.Parent.Badges)
 local Mop = require(script.Parent.Mop)
+local Manager = require(script.Parent.Manager)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
@@ -24,6 +25,8 @@ local won = false
 local finalCleaned = false
 local finalCleaner: Player? = nil
 local skipTimer = false -- playtest helper: end the shift now
+local penalty = 0 -- seconds taken off this shift's clock (Manager catches)
+local shiftStart = 0
 local night = Config.DefaultNight -- which night the next shift plays (the shift board sets this)
 local modifiers: { string } = {}
 
@@ -116,7 +119,7 @@ end
 
 -- Returns clean time in seconds, or nil if the clock ran out.
 local function runShift(rules: Rules.Rules): number?
-	won, finalCleaned, finalCleaner, skipTimer = false, false, nil, false
+	won, finalCleaned, finalCleaner, skipTimer, penalty = false, false, nil, false, 0
 	for _, p in Players:GetPlayers() do
 		p:SetAttribute("Cleaned", 0)
 		p:SetAttribute("CoffeeUsed", false)
@@ -132,18 +135,21 @@ local function runShift(rules: Rules.Rules): number?
 	end
 	SpillService.StartRound(rules.SpillCount)
 	local start = now()
+	shiftStart = start
 	ReplicatedStorage:SetAttribute("ShiftStart", start)
 	ReplicatedStorage:SetAttribute("ShiftEndsAt", start + rules.ShiftLength)
 	EventDirector.Start(rules)
+	Manager.Start(rules)
 
-	while not won and not skipTimer and now() < start + rules.ShiftLength do
+	while not won and not skipTimer and now() < start + rules.ShiftLength - penalty do
 		task.wait(0.1)
 	end
 	EventDirector.Stop()
+	Manager.Stop()
 	SpillService.Stop()
 
 	if won then
-		local t = now() - start
+		local t = now() - start + penalty -- lost time counts against the clean time
 		setPhase("Payoff")
 		Payoff.Run(finalCleaner)
 		return t
@@ -228,9 +234,22 @@ function RoundManager.ForceTimeout()
 	skipTimer = true
 end
 
+-- Takes seconds off the running shift: the clock jumps forward for everyone.
+function RoundManager.AddPenalty(seconds: number)
+	if ReplicatedStorage:GetAttribute("Phase") ~= "Shift" then
+		return
+	end
+	penalty += seconds
+	ReplicatedStorage:SetAttribute("ShiftStart", shiftStart - penalty)
+	ReplicatedStorage:SetAttribute("ShiftEndsAt", shiftStart + (ReplicatedStorage:GetAttribute("ShiftLength") :: number) - penalty)
+end
+
 function RoundManager.Init(s: Instance)
 	store = s
 	publishNight()
+	Manager.OnCatch = function()
+		RoundManager.AddPenalty(Config.Manager.TimePenalty)
+	end
 	SpillService.OnCleaned = onCleaned
 	ReadyRemote.OnServerEvent:Connect(function()
 		if ReplicatedStorage:GetAttribute("Phase") == "Lobby" then
