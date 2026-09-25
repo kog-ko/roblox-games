@@ -9,7 +9,7 @@ if not remotes then
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
 end
-for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight" } do
+for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name

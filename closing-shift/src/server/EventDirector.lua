@@ -47,10 +47,11 @@ local function playSound(parent: Instance, id: string, volume: number)
 	local s = Instance.new("Sound")
 	s.SoundId = id
 	s.Volume = volume
+	s.PlaybackSpeed = 1 + (rng:NextNumber() * 2 - 1) * Config.PitchVariation
 	s.RollOffMaxDistance = 90
 	s.Parent = parent
 	s:Play()
-	Debris:AddItem(s, 4)
+	Debris:AddItem(s, 6)
 end
 
 local function buildMannequin(cf: CFrame): Model
@@ -100,25 +101,13 @@ events.DoorChime = function()
 	local bell = CollectionService:GetTagged("DoorChime")[1]
 	if bell then
 		playSound(bell, Config.Sounds.Chime, 1)
-		task.wait(0.45)
-		playSound(bell, Config.Sounds.Chime, 0.8)
 	end
 end
 
 -- One aisle becomes a wall of the same product.
 events.IdenticalAisle = function()
 	local list = aisles()
-	local aisle = list[rng:NextInteger(1, #list)]
-	local color = Color3.fromRGB(205, 205, 195)
-	local size = Vector3.new(0.9, 1.3, 1.0)
-	for _, p in aisle:GetDescendants() do
-		if p:IsA("BasePart") and p.Name == "Product" then
-			local bottom = p.Position.Y - p.Size.Y / 2
-			p.Color = color
-			p.Size = size
-			p.Position = Vector3.new(p.Position.X, bottom + size.Y / 2, p.Position.Z)
-		end
-	end
+	StoreBuilder.MakeIdentical(list[rng:NextInteger(1, #list)])
 end
 
 -- Lights die for 2 seconds; when they come back there's a spill behind whoever is nearest the back room.

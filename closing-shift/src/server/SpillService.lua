@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local Config = require(ReplicatedStorage.Shared.Config)
+local CleanedRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Cleaned") :: RemoteEvent
 local Mop = require(script.Parent.Mop)
 
 type Spill = {
@@ -66,6 +67,7 @@ local function playAt(position: Vector3, soundId: string, volume: number)
 	local s = Instance.new("Sound")
 	s.SoundId = soundId
 	s.Volume = volume
+	s.PlaybackSpeed = 1 + (rng:NextNumber() * 2 - 1) * Config.PitchVariation
 	s.RollOffMaxDistance = 60
 	s.Parent = anchor
 	s:Play()
@@ -104,7 +106,9 @@ local function startSqueak(spill: Spill, player: Player, anchor: BasePart)
 	s.RollOffMaxDistance = 60
 	s.Looped = true
 	s.PlaybackRegionsEnabled = true
-	s.LoopRegion = NumberRange.new(0, Config.SqueakLoopLength)
+	s.PlaybackSpeed = 1 + (rng:NextNumber() * 2 - 1) * Config.PitchVariation
+	s.TimePosition = Config.ScrubLoop.Min
+	s.LoopRegion = Config.ScrubLoop
 	s.Parent = anchor
 	s:Play()
 	spill.Squeaks[player] = s
@@ -134,7 +138,10 @@ local function finish(spill: Spill, player: Player)
 		stopSqueak(spill, p)
 	end
 	active[spill.Model] = nil
-	playAt(spill.Parts[1].Position, Config.Sounds.Splash, 0.8)
+	playAt(spill.Parts[1].Position, if rng:NextNumber() < 0.5 then Config.Sounds.Splash else Config.Sounds.Splash2, 0.9)
+	-- every client plays the clean effects; the cleaner also gets the personal reward
+	local c = spill.Parts[1].Color
+	CleanedRemote:FireAllClients(spill.Parts[1].Position, c, player, spill.IsFinal)
 	tweenSizes(spill, 0.01, 0.25)
 	Debris:AddItem(spill.Model, 0.3)
 	if spill.IsFinal then
@@ -234,6 +241,14 @@ local function makeSpill(parts: { BasePart }, anchorPos: Vector3, isFinal: boole
 	end)
 
 	active[m] = spill
+	-- puddles spread out from a drop instead of popping in
+	if parts[1].Name == "Puddle" then
+		for i, p in parts do
+			local sz = sizes[i]
+			p.Size = Vector3.new(sz.X, sz.Y * 0.1, sz.Z * 0.1)
+		end
+		tweenSizes(spill, 1, 0.5)
+	end
 	m.Parent = folder
 	updateCount()
 	return spill

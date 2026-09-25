@@ -13,6 +13,12 @@ local Movement = require(script.Parent:WaitForChild("Movement"))
 local CameraFx = {}
 local player = Players.LocalPlayer :: Player
 local PSX = Config.PSX
+local kick = 0 -- degrees of downward nod, decays quickly
+
+-- A small camera nod, e.g. when a clean lands.
+function CameraFx.Kick(degrees: number)
+	kick = math.min(kick + degrees, 6)
+end
 
 local function snap(angle: number, step: number): number
 	return math.floor(angle / step + 0.5) * step
@@ -58,6 +64,11 @@ function CameraFx.Start()
 				local y = -math.abs(math.cos(bobT)) * bobAmt
 				cf = cf * CFrame.new(x, y, 0) * CFrame.Angles(0, 0, math.sin(bobT) * bobAmt * 0.06)
 			end
+		end
+
+		if kick > 0.01 then
+			cf = cf * CFrame.Angles(math.rad(-kick), 0, 0)
+			kick *= math.exp(-dt * 10)
 		end
 
 		camera.CFrame = cf

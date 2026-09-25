@@ -13,7 +13,8 @@
         "Results": { "$className": "RemoteEvent" },
         "PayoffCue": { "$className": "RemoteEvent" },
         "ShowNote": { "$className": "RemoteEvent" },
-        "Flashlight": { "$className": "RemoteEvent" }
+        "Flashlight": { "$className": "RemoteEvent" },
+        "Cleaned": { "$className": "RemoteEvent" }
       }
     },
     "ServerScriptService": {

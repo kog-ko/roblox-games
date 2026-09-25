@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Clock = require(Shared:WaitForChild("Clock"))
@@ -158,15 +159,21 @@ function Hud.Start()
 			countText.Text = "SHIFT STARTS IN " .. tostring(ReplicatedStorage:GetAttribute("Countdown") or 0)
 		elseif phase == "Shift" then
 			local start = (ReplicatedStorage:GetAttribute("ShiftStart") or 0) :: number
-			clockText.Text = Clock.Format(workspace:GetServerTimeNow() - start)
+			local elapsed = workspace:GetServerTimeNow() - start
+			clockText.Text = Clock.Format(elapsed)
+			-- last hour: the clock pulses red
+			if elapsed > Config.ShiftLength * 0.75 then
+				clockText.TextColor3 = INK:Lerp(RED, 0.5 + 0.5 * math.sin(os.clock() * 6))
+			else
+				clockText.TextColor3 = INK
+			end
 			local untilT = player:GetAttribute("CoffeeUntil")
 			local left = if type(untilT) == "number" then untilT - workspace:GetServerTimeNow() else 0
 			boostText.Text = if left > 0 then "COFFEE " .. math.ceil(left) .. "s" else ""
 		elseif phase == "LightsOut" then
 			clockText.Text = "6:00 AM"
 			clockText.TextColor3 = RED
-		end
-		if phase ~= "LightsOut" then
+		else
 			clockText.TextColor3 = INK
 		end
 	end)
@@ -193,6 +200,9 @@ function Hud.Start()
 	-- Server messages
 	ResultsRemote.OnClientEvent:Connect(function(r: any)
 		results.Visible = true
+		local scale = results:FindFirstChildOfClass("UIScale") or new("UIScale", { Parent = results })
+		scale.Scale = 0.6
+		TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 		if r.Outcome == "Fired" then
 			resTitle.Text = "YOU'RE FIRED"
 			resTitle.TextColor3 = RED

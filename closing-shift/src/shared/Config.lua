@@ -95,15 +95,29 @@ Config.Flashlight = {
 	MinToTurnOn = 3, -- a drained light won't switch back on until it has this much
 }
 
--- Sounds. These are built-in engine sounds, so they always load and can't be moderated away.
--- Swap in any asset ID ("rbxassetid://123") if you prefer something else.
+-- Sounds. Sound effects are from Pro Sound Effects and APM (licensed for every Roblox experience)
+-- plus a few free Creator Store uploads; all were checked to load. Swap any ID here.
+local function id(n: number): string
+	return "rbxassetid://" .. n
+end
 Config.Sounds = {
-	Squeak = "rbxasset://sounds/action_swim.mp3", -- plays while mopping
-	Splash = "rbxasset://sounds/impact_water.mp3", -- plays when a spill is cleaned
-	Chime = "rbxasset://sounds/electronicpingshort.wav", -- front door chime
-	Buzz = "rbxasset://sounds/clickfast.wav", -- lights cutting out
+	Squeak = id(9113598131), -- heavy floor scrubbing, looped while mopping
+	Splash = id(9125703162), -- puddle splash when a spill is cleaned
+	Splash2 = id(9125702439), -- alternate splash (picked at random)
+	Kaching = id(134810204798705), -- cash register: your personal reward for a clean
+	Chime = id(9125935023), -- shop door bell (the DoorChime event)
+	Buzz = id(9118149104), -- relay clunk when the lights cut out
+	FlashClick = id(9114480271), -- flashlight switch
+	Hum = id(4227579935), -- fluorescent tube hum (loops)
+	Fridge = id(171186876), -- cooler compressor hum (loops)
+	Ambient = id(1842083079), -- low cinematic drone under everything
+	StingPayoff = id(9047014318), -- back-room reveal
+	StingFired = id(1846887425), -- YOU'RE FIRED
+	UIClick = id(87437544236708), -- button presses
 }
-Config.SqueakLoopLength = 0.8 -- seconds of the squeak clip looped while mopping
+Config.ScrubLoop = NumberRange.new(1, 3) -- seconds of the scrub clip looped while mopping
+Config.PitchVariation = 0.08 -- every one-shot plays at 1 +/- this speed so repeats don't sound robotic
+Config.Volumes = { Ambient = 0.35, Hum = 0.25, Fridge = 0.3, UI = 0.4, Sting = 0.8 }
 
 -- ===== IDs: fill these in (0 = disabled, the game just skips it) =====
 -- Badges: Creator Dashboard > your experience > Engagement > Badges > Create a Badge.

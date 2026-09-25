@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Controls = require(script.Parent:WaitForChild("Controls"))
+local SoundFx = require(script.Parent:WaitForChild("SoundFx"))
 local Remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Flashlight") :: RemoteEvent
 
 local Flashlight = {}
@@ -138,6 +139,7 @@ function Flashlight.Start()
 		end
 		on = state
 		light.Enabled = on
+		SoundFx.Play(Config.Sounds.FlashClick, 0.6, if on then 1.1 else 0.95)
 		player:SetAttribute("ViewmodelLight", if on then 1 else 0) -- lights the mop viewmodel
 		Remote:FireServer(on)
 	end

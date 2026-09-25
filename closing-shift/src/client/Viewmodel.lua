@@ -15,6 +15,12 @@ local Movement = require(script.Parent:WaitForChild("Movement"))
 local Viewmodel = {}
 local player = Players.LocalPlayer :: Player
 local FP = Config.FirstPerson
+local flourish = 0 -- 1 right after a clean, decays to 0
+
+-- A quick flick of the mop after a clean.
+function Viewmodel.Flourish()
+	flourish = 1
+end
 
 -- The hotbar is gone: the server equips the mop, so there's nothing to pick.
 local function hideBackpack()
@@ -178,8 +184,10 @@ function Viewmodel.Start()
 		local scrubHead = Vector3.new(stroke * 0.3, -0.25 * scrubAmt, stroke)
 		local scrubHand = Vector3.new(0, -0.1 * scrubAmt, stroke * 0.45)
 
-		local hand = FP.HandOffset + bob + sway + scrubHand
-		local aim = FP.HeadOffset + bob * 0.5 + sway * 0.5 + scrubHead
+		flourish = math.max(0, flourish - dt * 2.4)
+		local lift = math.sin((1 - flourish) * math.pi) * (if flourish > 0 then 1 else 0)
+		local hand = FP.HandOffset + bob + sway + scrubHand + Vector3.new(0, 0.25, 0.15) * lift
+		local aim = FP.HeadOffset + bob * 0.5 + sway * 0.5 + scrubHead + Vector3.new(-0.4, 1.7, 1.1) * lift
 		local up = (hand - aim).Unit
 		local right = (Vector3.xAxis - up * up.X).Unit
 		-- The hand grips 1 stud above the handle's centre (matches Tool.Grip in Mop.lua).

@@ -7,6 +7,7 @@ local playerGui = (Players.LocalPlayer :: Player):WaitForChild("PlayerGui") :: P
 playerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeSensor
 
 require(script:WaitForChild("Overlay")).Start()
+require(script:WaitForChild("SoundFx")).Start()
 require(script:WaitForChild("LightsFx")).Start()
 require(script:WaitForChild("Movement")).Start()
 require(script:WaitForChild("CameraFx")).Start()
@@ -15,3 +16,4 @@ require(script:WaitForChild("Flashlight")).Start()
 require(script:WaitForChild("Prompts")).Start()
 require(script:WaitForChild("PayoffFx")).Start()
 require(script:WaitForChild("Hud")).Start()
+require(script:WaitForChild("Juice")).Start()
