@@ -271,9 +271,14 @@ function DataService.RefreshAll()
 	end
 end
 
+-- Studio test sessions set workspace attribute TestNoSave: profiles still load, nothing is written.
+local function testNoSave(): boolean
+	return game:GetService("RunService"):IsStudio() and workspace:GetAttribute("TestNoSave") == true
+end
+
 function DataService.Save(player: Player): boolean
 	local p = profiles[player]
-	if not p or p.LoadFailed or not store or disabled then
+	if not p or p.LoadFailed or not store or disabled or testNoSave() then
 		return false
 	end
 	local s = store :: DataStore
@@ -338,13 +343,13 @@ end
 -- True when purchases and progress are really being saved. In Studio without API access this is
 -- false; Monetization then grants test purchases without the idempotency write.
 function DataService.IsSaving(): boolean
-	return store ~= nil and not disabled
+	return store ~= nil and not disabled and not testNoSave()
 end
 
 -- Applies fn to a player's stored profile when they aren't in this server (gifts to someone who
 -- left before the purchase finished). Returns true if the write succeeded.
 function DataService.GrantOffline(userId: number, fn: (Profile) -> ()): boolean
-	if not store or disabled then
+	if not store or disabled or testNoSave() then
 		return false
 	end
 	local s = store :: DataStore

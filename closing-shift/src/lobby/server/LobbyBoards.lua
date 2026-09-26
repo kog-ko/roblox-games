@@ -13,6 +13,7 @@ local LobbyBoards = {}
 type Board = { Kind: string, Title: TextLabel?, List: TextLabel? }
 local boards: { Board } = {}
 local fastestNight = 0
+local billboardName: TextLabel? = nil -- the rooftop EMPLOYEE OF THE WEEK billboard (LobbyExtras)
 
 local function format(kind: string, value: number): string
 	if kind == "night" then
@@ -40,6 +41,9 @@ local function refresh(b: Board)
 		b.List.Text = "board offline"
 		return
 	end
+	if b.Kind == "weekly" and billboardName then
+		billboardName.Text = if entries[1] then string.upper(entries[1].Name) else "COULD BE YOU"
+	end
 	local lines = {}
 	if b.Kind == "weekly" then
 		local left = Progress.WeekEnds(Progress.Week()) - os.time()
@@ -64,6 +68,9 @@ function LobbyBoards.Init(lobby: Instance)
 			List = gui and gui:FindFirstChild("List") :: TextLabel?,
 		})
 	end
+	local bb = lobby:FindFirstChild("WeeklyBillboard", true)
+	local gui = bb and bb:FindFirstChild("BillboardGui")
+	billboardName = gui and gui:FindFirstChild("Name") :: TextLabel?
 	task.spawn(function()
 		while true do
 			for _, b in boards do

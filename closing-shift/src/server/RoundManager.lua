@@ -17,6 +17,7 @@ local Economy = require(script.Parent.Economy)
 local ServerBoosts = require(script.Parent.ServerBoosts)
 local Analytics = require(script.Parent.Analytics)
 local Jobs = require(script.Parent.Jobs)
+local Zones = require(script.Parent.Zones)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
@@ -64,7 +65,7 @@ end
 
 -- Publishes the upcoming night so the lobby, HUD and clock can show it.
 local function publishNight()
-	local r = Rules.Resolve(night, modifiers)
+	local r = Rules.Resolve(night, modifiers, #Players:GetPlayers())
 	ReplicatedStorage:SetAttribute("Night", r.Night)
 	ReplicatedStorage:SetAttribute("NightName", r.Name)
 	ReplicatedStorage:SetAttribute("ShiftLength", r.ShiftLength)
@@ -108,6 +109,7 @@ local function onCleaned(player: Player, isFinal: boolean, counts: boolean)
 end
 
 local function resetStore()
+	Zones.CloseAll(store)
 	SpillService.Reset()
 	EventDirector.Cleanup()
 	Payoff.Reset()
@@ -188,7 +190,9 @@ local function runShift(rules: Rules.Rules): number?
 			Analytics.Step(p, Analytics.Funnel.ReachedNight2)
 		end
 	end
-	SpillService.StartRound(rules.SpillCount)
+	-- bigger crews open more of the store (stockroom, freezer) and get more, bigger spills
+	local open = Zones.Apply(store, rules.Crew)
+	SpillService.StartRound(rules.SpillCount, open, rules.BigSpillChance)
 	revivedThisNight = false
 	return shiftLoop(rules, now())
 end
@@ -499,7 +503,7 @@ end
 function RoundManager.Run()
 	while true do
 		runLobby()
-		local rules = Rules.Resolve(night, modifiers)
+		local rules = Rules.Resolve(night, modifiers, #Players:GetPlayers())
 		print(string.format("[Round] night %d: %s (%d spills, %ds)", rules.Night, rules.Name, rules.SpillCount, rules.ShiftLength))
 		local ok, result = pcall(runShift, rules)
 		if not ok then

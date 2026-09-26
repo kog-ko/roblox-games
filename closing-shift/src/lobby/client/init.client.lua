@@ -18,6 +18,7 @@ Shop.Start()
 Wardrobe.Start(openShop)
 PartyUi.Start()
 JobsUi.Start()
+require(script:WaitForChild("ObbyUi")).Start()
 require(script:WaitForChild("LobbyHud")).Start({
 	Shop = openShop,
 	Style = function()

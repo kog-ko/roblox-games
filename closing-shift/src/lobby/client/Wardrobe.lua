@@ -121,11 +121,11 @@ function Wardrobe.Start(openShop: () -> ())
 				BackgroundTransparency = 1, Font = Enum.Font.Arcade, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
 				TextColor3 = if item.Vip then GOLD else Color3.fromRGB(230, 230, 220), Parent = row,
 			})
-			local have = item.Price == 0 or owned(item.Id)
+			local have = (item.Price == 0 and not item.Earned) or owned(item.Id)
 			new("TextLabel", {
-				Text = if have then "OWNED" else "$" .. item.Price, Size = UDim2.new(1, -250, 0, 16), Position = UDim2.fromOffset(50, 28),
+				Text = if have then "OWNED" elseif item.Earned then "EARN: " .. (item.Hint or "?") else "$" .. item.Price, Size = UDim2.new(1, -250, 0, 16), Position = UDim2.fromOffset(50, 28),
 				BackgroundTransparency = 1, Font = Enum.Font.Arcade, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = if have then Color3.fromRGB(150, 220, 150) elseif cash >= item.Price then GOLD else Color3.fromRGB(200, 120, 110), Parent = row,
+				TextColor3 = if have then Color3.fromRGB(150, 220, 150) elseif item.Earned then Color3.fromRGB(150, 200, 255) elseif cash >= item.Price then GOLD else Color3.fromRGB(200, 120, 110), Parent = row,
 			})
 			local b
 			if equipped == item.Id then
@@ -136,6 +136,9 @@ function Wardrobe.Start(openShop: () -> ())
 				b.Activated:Connect(function()
 					equip:FireServer(item.Id)
 				end)
+			elseif item.Earned then
+				b = button(row, "Action", "LOCKED", UDim2.fromOffset(180, 36), UDim2.new(1, -186, 0, 6), GREY)
+				b.AutoButtonColor = false
 			elseif item.Vip and not vip then
 				b = button(row, "Action", "VIP ONLY", UDim2.fromOffset(180, 36), UDim2.new(1, -186, 0, 6), GOLD)
 				b.Activated:Connect(function()

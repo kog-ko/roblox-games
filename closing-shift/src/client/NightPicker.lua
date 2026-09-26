@@ -16,7 +16,7 @@ local INK = Color3.fromRGB(225, 230, 210)
 local BOX = Color3.fromRGB(12, 14, 12)
 
 local function describe(n: number): string
-	local r = Rules.Resolve(n)
+	local r = Rules.Resolve(n, nil, #game:GetService("Players"):GetPlayers())
 	local tags = { string.format("%d SPILLS", r.SpillCount), string.format("%d MIN", math.floor(r.ShiftLength / 60)) }
 	if r.Manager.Enabled then
 		table.insert(tags, "MANAGER")

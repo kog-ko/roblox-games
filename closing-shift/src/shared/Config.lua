@@ -23,6 +23,9 @@ Config.DefaultStore = "QuikStop"
 
 -- Round flow (seconds). Shift length and spill count are per night (Data/Nights).
 Config.IntermissionTime = 15
+-- Store zones and the crew size that opens each (see Data/Nights for how spills and time scale)
+Config.Zones = { Floor = 1, Stockroom = 2, Freezer = 3 }
+Config.BigSpillScale = 1.6 -- big spills are this much bigger
 Config.ShiftStartHour = 2
 Config.ShiftEndHour = 6
 Config.PayoffTime = 12 -- back-room reveal before the results screen
@@ -202,6 +205,15 @@ Config.Queue = {
 	FullCountdown = 4, -- the countdown drops to this once the pad is full
 	RetryDelay = 5, -- after a failed teleport, players can queue again after this
 }
+-- Lobby obbies: display name and the cash each pays once per UTC day. Clearing all of them
+-- unlocks the ObbyTrail cosmetic.
+Config.Obbies = {
+	Roof = { Name = "THE ROOF RUN", Reward = 150 },
+	Spill = { Name = "THE SPILL CLEANUP", Reward = 200 },
+	Sign = { Name = "THE SIGN CLIMB", Reward = 250 },
+}
+Config.ObbyTrail = "TrailParkour"
+
 -- Shift servers reached from a queue start once the whole crew has arrived (or after this long).
 Config.ArrivalWait = 20
 

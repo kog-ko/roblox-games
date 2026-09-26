@@ -1,7 +1,8 @@
 --!strict
 -- Cosmetics, bought with shift cash in the lobby's WARDROBE and shown to everyone. Nothing here
 -- changes gameplay. One item per slot is equipped at a time; the first item of each slot is free
--- and owned by everyone. Vip = true: needs the VIP pass as well as the cash.
+-- and owned by everyone. Vip = true: needs the VIP pass as well as the cash. Earned = true: can't be
+-- bought; the game grants it (Hint says how).
 --
 -- Slots and where they show:
 --   Vest   a work vest over your avatar (lobby and shift)
@@ -20,6 +21,8 @@ export type Item = {
 	Color2: Color3?, -- second colour (mop head, trail end)
 	Material: string?,
 	Rainbow: boolean?, -- tag / trail cycles colours
+	Earned: boolean?,
+	Hint: string?,
 }
 
 local C = Color3.fromRGB
@@ -43,6 +46,7 @@ local Cosmetics: { Slots: { string }, SlotNames: { [string]: string }, Items: { 
 		{ Id = "TrailToxic", Slot = "Trail", Name = "TOXIC SPILL", Price = 15000, Color = C(120, 255, 80), Color2 = C(20, 90, 20) },
 		{ Id = "TrailRainbow", Slot = "Trail", Name = "RAINBOW", Price = 40000, Rainbow = true },
 		{ Id = "TrailGold", Slot = "Trail", Name = "MANAGER GOLD", Price = 120000, Color = C(255, 215, 80), Color2 = C(255, 250, 200), Vip = true },
+		{ Id = "TrailParkour", Slot = "Trail", Name = "PARKOUR", Price = 0, Earned = true, Hint = "CLEAR ALL 3 LOBBY OBBIES", Color = C(110, 230, 120), Color2 = C(255, 200, 70) },
 		-- Name tags
 		{ Id = "TagPlain", Slot = "Tag", Name = "PLAIN", Price = 0 },
 		{ Id = "TagMint", Slot = "Tag", Name = "MINT", Price = 1500, Color = C(120, 240, 180) },

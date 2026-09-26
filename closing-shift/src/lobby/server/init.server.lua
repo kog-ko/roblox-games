@@ -41,6 +41,7 @@ local Queue = require(script.Queue)
 local LobbyBoards = require(script.LobbyBoards)
 local Party = require(script.Party)
 local Stations = require(script.Stations)
+local Obby = require(script.Obby)
 
 Analytics.Init()
 Economy.OnCashChanged = Analytics.Cash
@@ -61,9 +62,13 @@ Party.Init()
 Queue.Init(l)
 LobbyBoards.Init(l)
 Stations.Init(l)
+Obby.Init()
 
 if game:GetService("RunService"):IsStudio() then
 	_G.ClosingShiftLobby = {
 		Queue = Queue.Debug,
+		-- test sessions stub saving / board writes through these
+		DataService = DataService,
+		Leaderboard = Leaderboard,
 	}
 end

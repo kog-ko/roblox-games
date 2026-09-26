@@ -19,6 +19,7 @@ type Spill = {
 	Squeaks: { [Player]: Sound }, -- looping mop squeak per player, stopped when the hold ends
 	Done: boolean,
 	Bonus: boolean?, -- added by a paid Spill Storm: pays, but doesn't count toward rankings
+	Stages: number?, -- big spills take 2 cleans (two players can each do one at the same time)
 }
 
 local SpillService = {}
@@ -135,6 +136,25 @@ local function tweenSizes(spill: Spill, scale: number, t: number)
 end
 
 local function finish(spill: Spill, player: Player, assisted: boolean?)
+	if (spill.Stages or 1) > 1 then
+		-- a big spill: this clean takes it down a size, the next one finishes it. Anyone else
+		-- already mopping it keeps going and can finish it right after.
+		spill.Stages = (spill.Stages :: number) - 1
+		stopSqueak(spill, player)
+		spill.Holds[player] = nil
+		spill.Finished[player] = nil
+		playAt(spill.Parts[1].Position, Config.Sounds.Splash, 0.7)
+		CleanedRemote:FireAllClients(spill.Parts[1].Position, spill.Parts[1].Color, player, false)
+		for i, size in spill.Sizes do
+			spill.Sizes[i] = Vector3.new(size.X, size.Y * 0.62, size.Z * 0.62)
+		end
+		tweenSizes(spill, 1, 0.3)
+		spill.Prompt.ObjectText = "Spill"
+		if SpillService.OnCleaned then
+			SpillService.OnCleaned(player, false, not spill.Bonus and not assisted)
+		end
+		return
+	end
 	spill.Done = true
 	spill.Prompt.Enabled = false
 	for p in spill.Squeaks do
@@ -273,16 +293,25 @@ local function puddle(pos: Vector3, radius: number, color: Color3): BasePart
 	return p
 end
 
-function SpillService.Spawn(pos: Vector3, isFinal: boolean?)
+-- big: a big spill (bigger, two cleans).
+function SpillService.Spawn(pos: Vector3, isFinal: boolean?, big: boolean?)
 	local color = if isFinal then Color3.fromRGB(40, 40, 45) else COLORS[rng:NextInteger(1, #COLORS)]
 	local r = rng:NextNumber(Config.SpillMinRadius, Config.SpillMaxRadius)
+	if big and not isFinal then
+		r *= Config.BigSpillScale
+	end
 	local parts = { puddle(pos, r, color) }
 	-- a couple of splatter blobs so it doesn't look like a perfect coin
 	for _ = 1, 2 do
 		local off = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)).Unit * r * 0.9
 		table.insert(parts, puddle(pos + off, r * rng:NextNumber(0.3, 0.5), color))
 	end
-	return makeSpill(parts, pos, isFinal == true)
+	local spill = makeSpill(parts, pos, isFinal == true)
+	if big and not isFinal then
+		spill.Stages = 2
+		spill.Prompt.ObjectText = "BIG SPILL (2 CLEANS)"
+	end
+	return spill
 end
 
 -- A trail of blocky footprints split into a few cleanable chunks.
@@ -326,18 +355,38 @@ function SpillService.SpawnFootprints(path: { Vector3 }, chunks: number)
 	end
 end
 
-function SpillService.StartRound(count: number)
+-- Markers in the zones this crew has open (a marker's Zone attribute; none means "Floor").
+local openZones: { [string]: boolean } = { Floor = true }
+local function openMarkers(): { Instance }
+	local out = {}
+	for _, m in (store:FindFirstChild("SpillMarkers") :: Instance):GetChildren() do
+		local zone = m:GetAttribute("Zone")
+		if openZones[if type(zone) == "string" then zone else "Floor"] then
+			table.insert(out, m)
+		end
+	end
+	return out
+end
+
+-- True while new spills can still be added (the floor isn't done yet), e.g. for a leaking cooler.
+function SpillService.CanAddSpills(): boolean
+	return accepting and finalPending
+end
+
+-- zones: the open zones (default: just the main floor). bigChance: chance each spill is a big one.
+function SpillService.StartRound(count: number, zones: { [string]: boolean }?, bigChance: number?)
 	SpillService.Reset()
 	accepting = true
 	finalPending = true
-	local markers = (store:FindFirstChild("SpillMarkers") :: Instance):GetChildren()
+	openZones = zones or { Floor = true }
+	local markers = openMarkers()
 	for i = #markers, 2, -1 do
 		local j = rng:NextInteger(1, i)
 		markers[i], markers[j] = markers[j], markers[i]
 	end
 	for i = 1, math.min(count - 1, #markers) do
 		local m = markers[i] :: BasePart
-		SpillService.Spawn(m.Position + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)))
+		SpillService.Spawn(m.Position + Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)), false, rng:NextNumber() < (bigChance or 0))
 	end
 	updateCount()
 end
@@ -368,7 +417,7 @@ function SpillService.SpawnExtra(count: number): number
 	if not accepting or not finalPending then
 		return 0 -- only while the floor still has to be cleaned
 	end
-	local markers = (store:FindFirstChild("SpillMarkers") :: Instance):GetChildren()
+	local markers = openMarkers()
 	for i = #markers, 2, -1 do
 		local j = rng:NextInteger(1, i)
 		markers[i], markers[j] = markers[j], markers[i]

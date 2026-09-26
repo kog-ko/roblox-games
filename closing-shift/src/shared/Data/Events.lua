@@ -10,6 +10,9 @@ local Events = {
 	IdenticalAisle = { Weight = 1 },
 	LightsOut = { Weight = 1, UsesSpills = true, Duration = 2, BehindPlayerDistance = 6 },
 	Mannequin = { Weight = 1, VanishDistance = 15, MaxLifetime = 90 },
+	-- a cooler starts leaking: a new spill every Every seconds (up to MaxSpills) until someone holds
+	-- the shut-off valve for ValveHold seconds
+	Leak = { Weight = 1.2, UsesSpills = true, Every = 10, MaxSpills = 4, ValveHold = 3 },
 }
 
 return Events

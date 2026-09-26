@@ -18,6 +18,8 @@ export type Rules = {
 	WinBonus: number,
 	WalkSpeedMult: number,
 	Modifiers: { string },
+	Crew: number,
+	BigSpillChance: number,
 }
 
 local Rules = {}
@@ -26,7 +28,9 @@ function Rules.NightCount(): number
 	return #Config.Nights
 end
 
-function Rules.Resolve(night: number, modifiers: { string }?): Rules
+-- crew: how many players are working the shift (defaults to 1). Bigger crews get more spills, a bit
+-- more time and more frequent events; the store also opens more zones for them (server Zones.lua).
+function Rules.Resolve(night: number, modifiers: { string }?, crew: number?): Rules
 	local n = Config.Nights[math.clamp(night, 1, #Config.Nights)]
 	local r: Rules = {
 		Night = math.clamp(night, 1, #Config.Nights),
@@ -43,7 +47,13 @@ function Rules.Resolve(night: number, modifiers: { string }?): Rules
 		WinBonus = n.WinBonus or 0,
 		WalkSpeedMult = 1,
 		Modifiers = {},
+		Crew = math.max(1, math.floor(crew or 1)),
+		BigSpillChance = n.BigSpillChance or 0,
 	}
+	local extra = r.Crew - 1
+	r.SpillCount += (n.SpillsPerExtra or 0) * extra
+	r.ShiftLength = math.floor(r.ShiftLength * (1 + (n.TimePerExtra or 0) * extra) + 0.5)
+	r.EventGap = { r.EventGap[1] / (1 + 0.1 * extra), r.EventGap[2] / (1 + 0.1 * extra) }
 	for _, id in modifiers or {} do
 		local m = Config.Modifiers[id]
 		if m then

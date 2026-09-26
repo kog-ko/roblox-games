@@ -25,7 +25,7 @@ local byId: { [string]: any } = {}
 local defaults: { [string]: string } = {}
 for _, item in DATA.Items do
 	byId[item.Id] = item
-	if item.Price == 0 and not defaults[item.Slot] then
+	if item.Price == 0 and not item.Earned and not defaults[item.Slot] then
 		defaults[item.Slot] = item.Id
 	end
 end
@@ -185,8 +185,8 @@ local function buy(player: Player, id: any)
 	end
 	local item = byId[id]
 	local prof = DataService.Get(player)
-	if not item or not prof or prof.Cosmetics.Owned[id] or item.Price == 0 then
-		return
+	if not item or not prof or prof.Cosmetics.Owned[id] or item.Price == 0 or item.Earned then
+		return -- free, earned-only, or already owned
 	end
 	if item.Vip and not player:GetAttribute("VIP") then
 		Banner:FireClient(player, "VIP ONLY. GET VIP IN THE SHOP", "Cosmetic")
@@ -214,8 +214,8 @@ local function equip(player: Player, id: any)
 	if not item or not prof then
 		return
 	end
-	if item.Price > 0 and not prof.Cosmetics.Owned[id] then
-		return
+	if (item.Price > 0 or item.Earned) and not prof.Cosmetics.Owned[id] then
+		return -- not bought / not earned yet
 	end
 	if item.Vip and not player:GetAttribute("VIP") then
 		return -- bought as a VIP, but the pass is gone

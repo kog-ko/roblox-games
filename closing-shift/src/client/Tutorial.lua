@@ -77,7 +77,7 @@ function Tutorial.Start()
 
 	local function onPhase()
 		local phase = ReplicatedStorage:GetAttribute("Phase")
-		local rules = Rules.Resolve((ReplicatedStorage:GetAttribute("Night") or 1) :: number)
+		local rules = Rules.Resolve((ReplicatedStorage:GetAttribute("Night") or 1) :: number, nil, #game:GetService("Players"):GetPlayers())
 		active = phase == "Shift" and rules.Tutorial
 		if active then
 			cleanedOnce = false

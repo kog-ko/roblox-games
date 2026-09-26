@@ -11,6 +11,7 @@
 --   backroom   back-room spills you cleaned
 --   crew       nights finished with at least one Roblox friend in the crew
 --   fast       nights cleared fast enough for the FAST SHIFT bonus
+--   obby       lobby obbies cleared (first clear of each obby per day)
 export type Job = { Id: string, Text: string, Kind: string, Goal: number, Reward: number, Arg: number? }
 
 local Challenges: { DailyCount: number, WeeklyCount: number, Daily: { Job }, Weekly: { Job } } = {
@@ -27,6 +28,8 @@ local Challenges: { DailyCount: number, WeeklyCount: number, Daily: { Job }, Wee
 		{ Id = "d_backroom", Text = "CLEAN THE BACK-ROOM SPILL", Kind = "backroom", Goal = 1, Reward = 200 },
 		{ Id = "d_crew", Text = "FINISH A NIGHT WITH A FRIEND", Kind = "crew", Goal = 1, Reward = 250 },
 		{ Id = "d_fast", Text = "GET A FAST SHIFT BONUS", Kind = "fast", Goal = 1, Reward = 250 },
+		{ Id = "d_obby", Text = "CLEAR AN OBBY IN THE LOBBY", Kind = "obby", Goal = 1, Reward = 150 },
+		{ Id = "d_obby3", Text = "CLEAR ALL 3 LOBBY OBBIES", Kind = "obby", Goal = 3, Reward = 400 },
 	},
 	Weekly = {
 		{ Id = "w_clean200", Text = "CLEAN 200 SPILLS", Kind = "clean", Goal = 200, Reward = 2000 },

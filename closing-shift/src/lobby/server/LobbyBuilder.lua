@@ -1,6 +1,7 @@
 --!strict
--- The lobby: the Quik Stop's parking lot at night. Everyone spawns here, sees everyone else's rank,
--- trophies and VIP status, and queues for a shift on one of the neon pads by the storefront.
+-- The lobby: the Quik Stop's block at night (the lot here; the obbies, street and plaza in
+-- LobbyExtras). Everyone spawns here, sees everyone else's rank, trophies and VIP status, and
+-- queues for a shift on one of the neon pads by the storefront.
 --
 -- Built from Parts in code (like the store). Names the rest of the lobby code looks for:
 --   SpawnPoint, QueuePads/<Key> (Pad, Sign/SignGui with Title, Sub, Status), Boards/<Key>
@@ -9,6 +10,7 @@
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local LobbyExtras = require(script.Parent:WaitForChild("LobbyExtras"))
 
 local LobbyBuilder = {}
 
@@ -343,7 +345,7 @@ function LobbyBuilder.Build(): Model
 		existing:Destroy()
 	end
 	local lobby = model("Lobby", workspace)
-	part({ Name = "Ground", Size = Vector3.new(190, 1, 140), Position = Vector3.new(0, -0.5, 0), Material = M.Asphalt, Color = ASPHALT, Parent = lobby })
+	part({ Name = "Ground", Size = Vector3.new(340, 1, 260), Position = Vector3.new(0, -0.5, 0), Material = M.Asphalt, Color = ASPHALT, Parent = lobby })
 	-- parking lines
 	for i = -4, 4 do
 		part({ Name = "Line", Size = Vector3.new(0.4, 0.05, 10), Position = Vector3.new(i * 9, 0.03, 50), Color = Color3.fromRGB(200, 200, 190), CanCollide = false, Parent = lobby })
@@ -367,7 +369,8 @@ function LobbyBuilder.Build(): Model
 	car(lobby, Vector3.new(-27, 0, 52), Color3.fromRGB(120, 30, 30), 0)
 	car(lobby, Vector3.new(9, 0, 52), Color3.fromRGB(40, 60, 90), 0)
 	car(lobby, Vector3.new(-45, 0, 52), Color3.fromRGB(150, 150, 140), 0)
-	part({ Name = "Dumpster", Size = Vector3.new(8, 5, 4), Position = Vector3.new(-60, 2.5, -55), Material = M.Metal, Color = Color3.fromRGB(40, 80, 50), Parent = lobby })
+	-- obbies, the street, the plaza, neon (LobbyExtras)
+	LobbyExtras.Build(lobby, { part = part, model = model, folder = folder, label = label, surfaceGui = surfaceGui, lamp = lamp })
 	-- spawn in the middle of the lot, facing the storefront
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "SpawnPoint"
@@ -381,12 +384,12 @@ function LobbyBuilder.Build(): Model
 	spawn.Neutral = true
 	spawn.TopSurface = Enum.SurfaceType.Smooth
 	spawn.Parent = lobby
-	-- keep everyone in the lot
+	-- keep everyone on the block (tall enough for the sign climb)
 	for _, w in {
-		{ Vector3.new(190, 60, 1), Vector3.new(0, 30, -70.5) },
-		{ Vector3.new(190, 60, 1), Vector3.new(0, 30, 70.5) },
-		{ Vector3.new(1, 60, 140), Vector3.new(-95.5, 30, 0) },
-		{ Vector3.new(1, 60, 140), Vector3.new(95.5, 30, 0) },
+		{ Vector3.new(340, 140, 1), Vector3.new(0, 70, -130.5) },
+		{ Vector3.new(340, 140, 1), Vector3.new(0, 70, 130.5) },
+		{ Vector3.new(1, 140, 260), Vector3.new(-170.5, 70, 0) },
+		{ Vector3.new(1, 140, 260), Vector3.new(170.5, 70, 0) },
 	} do
 		part({ Name = "Boundary", Size = w[1], Position = w[2], Transparency = 1, Parent = lobby })
 	end

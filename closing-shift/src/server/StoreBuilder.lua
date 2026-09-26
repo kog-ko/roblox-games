@@ -7,7 +7,9 @@
 -- Other scripts find things here by name or tag, so keep these when editing:
 --   Aisles/AisleN (Plinth, Products/Product, Sign "Number" labels), SpillMarkers, FinalSpillMarker,
 --   SpawnPoint, Lights, Spills, EventProps, Leaderboard/List, BackRoom (Note, NoteText, PhotoFrame,
---   PhotoName), tags FluorescentTube, BackRoomLight, StreetLamp, PoweredNeon, DoorChime, PayoffPhoto.
+--   PhotoName), Stockroom (StockroomDoor, Freezer/FreezerDoor), tags FluorescentTube, BackRoomLight,
+--   StreetLamp, PoweredNeon, DoorChime, PayoffPhoto. Spill markers carry a Zone attribute
+--   ("Floor", "Stockroom", "Freezer"); bigger crews open more zones (see Zones.lua).
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -161,7 +163,10 @@ local function buildStructure(store: Instance)
 		part({ Name = "Vent", Size = Vector3.new(2.6, 0.12, 2.6), Position = v, Material = M.DiamondPlate, Color = Color3.fromRGB(110, 112, 105), CanCollide = false, Parent = grid })
 	end
 
-	wall("BackWall", Vector3.new(62, WALL_H, 1), Vector3.new(0, WALL_H / 2, -20.5))
+	-- back wall has the doorway into the stockroom (x 22..28, 9 high; see buildStockroom)
+	wall("BackWall", Vector3.new(53, WALL_H, 1), Vector3.new(-4.5, WALL_H / 2, -20.5))
+	wall("BackWallB", Vector3.new(3, WALL_H, 1), Vector3.new(29.5, WALL_H / 2, -20.5))
+	wall("BackWallTop", Vector3.new(6, WALL_H - 9, 1), Vector3.new(25, 9 + (WALL_H - 9) / 2, -20.5))
 	-- left wall has the doorway into the restroom hallway (z -15..-11, 9 high)
 	wall("LeftWallA", Vector3.new(1, WALL_H, 5.5), Vector3.new(-30.5, WALL_H / 2, -17.75))
 	wall("LeftWallB", Vector3.new(1, WALL_H, 31.5), Vector3.new(-30.5, WALL_H / 2, 4.75))
@@ -792,6 +797,122 @@ local function buildBackRoom(store: Instance)
 	part({ Name = "FinalSpillMarker", Size = Vector3.new(1, 0.1, 1), Position = Vector3.new(37.5, 0.05, -12), Transparency = 1, CanCollide = false, CanQuery = false, Parent = b })
 end
 
+-- The stockroom behind the store (x -30..30, z -21..-60): tall pallet racks, a loading dock, a
+-- forklift, and the walk-in freezer in the west corner. Its roll-up door (back wall, x 22..28) and the
+-- freezer door open for bigger crews (Zones.lua); closed, they are solid.
+local function buildStockroom(store: Instance)
+	local sr = model("Stockroom", store)
+	local H = 20
+	local brick = Color3.fromRGB(105, 100, 92)
+	part({ Name = "Floor", Size = Vector3.new(62, 1, 40), Position = Vector3.new(0, -0.5, -40.5), Material = M.Concrete, Color = Color3.fromRGB(120, 118, 110), Parent = sr })
+	part({ Name = "Ceiling", Size = Vector3.new(62, 1, 40), Position = Vector3.new(0, H + 0.5, -40.5), Material = M.Metal, Color = Color3.fromRGB(60, 62, 60), Parent = sr })
+	for _, w in {
+		{ Vector3.new(62, H, 1), Vector3.new(0, H / 2, -60.5) },
+		{ Vector3.new(1, H, 40), Vector3.new(-30.5, H / 2, -40.5) },
+		{ Vector3.new(1, H, 40), Vector3.new(30.5, H / 2, -40.5) },
+	} do
+		part({ Name = "Wall", Size = w[1], Position = w[2], Material = M.Brick, Color = brick, Parent = sr })
+	end
+	-- the stockroom is taller than the store: brick above the shared back wall
+	part({ Name = "UpperWall", Size = Vector3.new(62, H - WALL_H, 1), Position = Vector3.new(0, WALL_H + (H - WALL_H) / 2, -20.5), Material = M.Brick, Color = brick, Parent = sr })
+	-- yellow safety lines along the walkways
+	for _, x in { -3.5, 3.5, 12.5, 19.5, 25.5 } do
+		part({ Name = "SafetyLine", Size = Vector3.new(0.3, 0.03, 30), Position = Vector3.new(x, 0.02, -40), Color = Color3.fromRGB(220, 190, 40), CanCollide = false, Parent = sr })
+	end
+	-- pallet racks: orange uprights, blue beams, boxes on every level
+	local rng = Random.new(77)
+	local racks = folder("Racks", sr)
+	for _, x in { -6.5, 9, 23 } do
+		local r = model("Rack", racks)
+		for _, z in { -27, -35, -43, -51 } do
+			for _, dx in { -1.4, 1.4 } do
+				part({ Name = "Upright", Size = Vector3.new(0.3, 16, 0.3), Position = Vector3.new(x + dx, 8, z), Material = M.Metal, Color = Color3.fromRGB(230, 110, 30), Parent = r })
+			end
+		end
+		for _, y in { 0.4, 5.3, 10.3, 15.3 } do
+			part({ Name = "Beam", Size = Vector3.new(3.2, 0.35, 25), Position = Vector3.new(x, y, -39), Material = M.Metal, Color = Color3.fromRGB(40, 80, 170), Parent = r })
+			for z = -50, -28, 2.6 do
+				if rng:NextNumber() < 0.8 then
+					local h = rng:NextNumber(1.6, 3.6)
+					part({
+						Name = "Box", Size = Vector3.new(rng:NextNumber(2, 2.8), h, 2.2), Position = Vector3.new(x + rng:NextNumber(-0.2, 0.2), y + 0.2 + h / 2, z),
+						Material = M.Cardboard, Color = Color3.fromRGB(165 + rng:NextInteger(-15, 15), 130, 85), Parent = r,
+					})
+				end
+			end
+		end
+	end
+	-- loading dock: two roll-up bay doors (shut), bumpers
+	for _, x in { -5, 15 } do
+		part({ Name = "BayDoor", Size = Vector3.new(10, 12, 0.4), Position = Vector3.new(x, 6, -59.9), Material = M.CorrugatedSteel, Color = Color3.fromRGB(150, 150, 140), Parent = sr })
+		part({ Name = "BayStripe", Size = Vector3.new(10, 0.6, 0.45), Position = Vector3.new(x, 1.2, -59.85), Color = Color3.fromRGB(220, 190, 40), CanCollide = false, Parent = sr })
+		for _, dx in { -5.6, 5.6 } do
+			part({ Name = "Bumper", Size = Vector3.new(0.8, 1.6, 0.6), Position = Vector3.new(x + dx, 1.2, -59.6), Material = M.Rubber, Color = Color3.fromRGB(25, 25, 25), Parent = sr })
+		end
+		local sign = part({ Name = "BaySign", Size = Vector3.new(3, 1.2, 0.1), Position = Vector3.new(x, 13.2, -59.9), Color = Color3.fromRGB(230, 225, 210), CanCollide = false, Parent = sr })
+		label(surfaceGui(sign, Enum.NormalId.Back, 40), if x < 0 then "BAY 1" else "BAY 2", { TextColor3 = Color3.fromRGB(40, 40, 40) })
+	end
+	-- forklift, parked badly
+	local fk = model("Forklift", sr)
+	local fcf = CFrame.new(3, 0, -54) * CFrame.Angles(0, math.rad(35), 0)
+	part({ Name = "Chassis", Size = Vector3.new(3.4, 2.2, 5), CFrame = fcf * CFrame.new(0, 1.6, 0), Material = M.Metal, Color = Color3.fromRGB(230, 170, 30), Parent = fk })
+	part({ Name = "Cage", Size = Vector3.new(3.2, 3, 0.2), CFrame = fcf * CFrame.new(0, 4.2, 0.8), Material = M.Metal, Color = DARK_STEEL, Parent = fk })
+	part({ Name = "Mast", Size = Vector3.new(2.6, 6, 0.4), CFrame = fcf * CFrame.new(0, 3.6, -2.7), Material = M.Metal, Color = DARK_STEEL, Parent = fk })
+	for _, dx in { -0.8, 0.8 } do
+		part({ Name = "Fork", Size = Vector3.new(0.3, 0.2, 3.2), CFrame = fcf * CFrame.new(dx, 0.3, -4.4), Material = M.Metal, Color = DARK_STEEL, Parent = fk })
+	end
+	for _, o in { Vector3.new(-1.8, 0.7, 1.6), Vector3.new(1.8, 0.7, 1.6), Vector3.new(-1.8, 0.7, -1.6), Vector3.new(1.8, 0.7, -1.6) } do
+		part({ Name = "Wheel", Size = Vector3.new(0.6, 1.4, 1.4), CFrame = fcf * CFrame.new(o), Color = Color3.fromRGB(20, 20, 20), Parent = fk })
+	end
+	for i = 0, 3 do
+		part({ Name = "Pallet", Size = Vector3.new(4, 0.5, 4), Position = Vector3.new(27, 0.25 + i * 0.5, -56), Material = M.WoodPlanks, Color = Color3.fromRGB(150, 115, 75), Parent = sr })
+	end
+	-- lights: rows of hanging tubes (they go out with the power like the rest)
+	for _, x in { -13, 0, 16, 27 } do
+		for _, z in { -28, -40, -52 } do
+			tube(sr, "StockTube", Vector3.new(x, H - 3, z), 6, "FluorescentTube", true)
+		end
+	end
+	-- roll-up door into the store (back wall, x 22..28)
+	local door = part({ Name = "StockroomDoor", Size = Vector3.new(6, 9, 0.4), Position = Vector3.new(25, 4.5, -20.5), Material = M.CorrugatedSteel, Color = Color3.fromRGB(150, 155, 150), Parent = sr })
+	door:SetAttribute("ClosedCFrame", door.CFrame)
+	local ds = part({ Name = "StockroomSign", Size = Vector3.new(6, 1.4, 0.1), Position = Vector3.new(25, 10.2, -19.95), Color = Color3.fromRGB(230, 225, 210), CanCollide = false, Parent = sr })
+	local dg = surfaceGui(ds, Enum.NormalId.Front, 40)
+	label(dg, "STOCKROOM", { Size = UDim2.fromScale(1, 0.6), TextColor3 = Color3.fromRGB(40, 40, 40) })
+	label(dg, "CREW OF 2+", { Name = "Sub", Position = UDim2.fromScale(0, 0.6), Size = UDim2.fromScale(1, 0.4), TextColor3 = Color3.fromRGB(170, 40, 35) })
+
+	-- walk-in freezer (x -30..-17, z -40..-59), door on its east side
+	local fz = model("Freezer", sr)
+	local frost = Color3.fromRGB(200, 225, 235)
+	local fw = Color3.fromRGB(185, 200, 205)
+	part({ Name = "FreezerFloor", Size = Vector3.new(13, 0.2, 19), Position = Vector3.new(-23.5, 0.1, -49.5), Material = M.Glacier, Color = frost, Parent = fz })
+	part({ Name = "FreezerCeiling", Size = Vector3.new(13, 0.6, 19), Position = Vector3.new(-23.5, 10.3, -49.5), Material = M.Metal, Color = fw, Parent = fz })
+	part({ Name = "FreezerNorth", Size = Vector3.new(13, 10, 0.6), Position = Vector3.new(-23.5, 5, -40.3), Material = M.Metal, Color = fw, Parent = fz })
+	part({ Name = "FreezerEastA", Size = Vector3.new(0.6, 10, 5), Position = Vector3.new(-17.3, 5, -42.5), Material = M.Metal, Color = fw, Parent = fz })
+	part({ Name = "FreezerEastB", Size = Vector3.new(0.6, 10, 9), Position = Vector3.new(-17.3, 5, -54.5), Material = M.Metal, Color = fw, Parent = fz })
+	part({ Name = "FreezerEastTop", Size = Vector3.new(0.6, 2, 5), Position = Vector3.new(-17.3, 9, -47.5), Material = M.Metal, Color = fw, Parent = fz })
+	local fdoor = part({ Name = "FreezerDoor", Size = Vector3.new(0.5, 8, 5), Position = Vector3.new(-17.3, 4, -47.5), Material = M.DiamondPlate, Color = Color3.fromRGB(170, 185, 190), Parent = fz })
+	fdoor:SetAttribute("ClosedCFrame", fdoor.CFrame)
+	local fsign = part({ Name = "FreezerSign", Size = Vector3.new(0.1, 1.4, 5), Position = Vector3.new(-16.95, 9.1, -47.5), Color = Color3.fromRGB(230, 240, 245), CanCollide = false, Parent = fz })
+	local fg = surfaceGui(fsign, Enum.NormalId.Right, 40)
+	label(fg, "WALK-IN FREEZER", { Size = UDim2.fromScale(1, 0.6), TextColor3 = Color3.fromRGB(40, 70, 120) })
+	label(fg, "CREW OF 3+", { Name = "Sub", Position = UDim2.fromScale(0, 0.6), Size = UDim2.fromScale(1, 0.4), TextColor3 = Color3.fromRGB(170, 40, 35) })
+	-- frozen crates, hanging meat, icicles, cold blue light
+	for i = 0, 5 do
+		part({ Name = "FrozenCrate", Size = Vector3.new(3, 2.4, 2.4), Position = Vector3.new(-28.5, 1.3 + (i % 2) * 2.5, -43 - math.floor(i / 2) * 5), Material = M.Ice, Color = Color3.fromRGB(170, 200, 215), Transparency = 0.1, Parent = fz })
+	end
+	for i = 0, 3 do
+		local x = -24 + (i % 2) * 3
+		local z = -46 - i * 3
+		part({ Name = "Hook", Size = Vector3.new(0.15, 3, 0.15), Position = Vector3.new(x, 8.6, z), Material = M.Metal, Color = STEEL, CanCollide = false, Parent = fz })
+		part({ Name = "Carcass", Size = Vector3.new(1.4, 3.4, 1), Position = Vector3.new(x, 5.6, z), Material = M.Plastic, Color = Color3.fromRGB(150, 70, 70), CanCollide = false, Parent = fz })
+	end
+	for i = 1, 10 do
+		part({ Name = "Icicle", Size = Vector3.new(0.2, rng:NextNumber(0.6, 1.6), 0.2), Position = Vector3.new(-29 + i * 1.2, 9.4, -40.8), Material = M.Ice, Color = frost, CanCollide = false, Parent = fz })
+	end
+	poweredNeon({ Name = "FreezerLight", Size = Vector3.new(6, 0.2, 0.6), Position = Vector3.new(-23.5, 9.9, -49.5), Color = Color3.fromRGB(150, 200, 255), CanCollide = false, Parent = fz }, Color3.fromRGB(140, 190, 255), 22)
+end
+
 local function buildSpillMarkers(store: Instance)
 	local m = folder("SpillMarkers", store)
 	local points = {}
@@ -807,8 +928,31 @@ local function buildSpillMarkers(store: Instance)
 	-- restroom hallway
 	table.insert(points, Vector3.new(-35, 0.05, -13))
 	table.insert(points, Vector3.new(-41, 0.05, -13))
+	local zones = {}
+	for _ in points do
+		table.insert(zones, "Floor")
+	end
+	-- stockroom walkways and cross aisles
+	for _, x in { -13, 0, 16, 27 } do
+		for _, z in { -30, -38, -46 } do
+			table.insert(points, Vector3.new(x, 0.05, z))
+			table.insert(zones, "Stockroom")
+		end
+	end
+	for _, x in { -10, 5, 20 } do
+		for _, z in { -24.5, -56 } do
+			table.insert(points, Vector3.new(x, 0.05, z))
+			table.insert(zones, "Stockroom")
+		end
+	end
+	-- walk-in freezer
+	for _, p in { Vector3.new(-24, 0.05, -44), Vector3.new(-24, 0.05, -50), Vector3.new(-21, 0.05, -55), Vector3.new(-27, 0.05, -54) } do
+		table.insert(points, p)
+		table.insert(zones, "Freezer")
+	end
 	for i, p in points do
-		part({ Name = "Marker" .. i, Size = Vector3.new(1, 0.1, 1), Position = p, Transparency = 1, CanCollide = false, CanQuery = false, Parent = m })
+		local mk = part({ Name = "Marker" .. i, Size = Vector3.new(1, 0.1, 1), Position = p, Transparency = 1, CanCollide = false, CanQuery = false, Parent = m })
+		mk:SetAttribute("Zone", zones[i])
 	end
 end
 
@@ -910,6 +1054,7 @@ function StoreBuilder.Build(): Model
 	buildLights(store)
 	buildOutside(store)
 	buildBackRoom(store)
+	buildStockroom(store)
 	buildSpillMarkers(store)
 	buildLeaderboard(store)
 	buildShiftBoard(store)

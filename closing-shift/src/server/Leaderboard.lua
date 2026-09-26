@@ -16,6 +16,11 @@ local Progress = require(ReplicatedStorage.Shared.Progress)
 
 local Leaderboard = {}
 local stores: { [string]: OrderedDataStore } = {}
+
+-- Studio test sessions (workspace attribute TestNoSave) never write to the live boards.
+local function testNoSave(): boolean
+	return game:GetService("RunService"):IsStudio() and workspace:GetAttribute("TestNoSave") == true
+end
 local offline = false
 local names: { [number]: string } = {}
 local titleLabel: TextLabel? = nil
@@ -125,6 +130,9 @@ end
 
 -- Records a time if it beats the player's previous entry.
 function Leaderboard.Submit(night: number, userId: number, seconds: number)
+	if testNoSave() then
+		return
+	end
 	local ods = nightStore(night)
 	if not ods then
 		return
@@ -149,6 +157,9 @@ end
 
 -- Lifetime earnings (cash a shift paid before multipliers) and career spills, for the lobby boards.
 function Leaderboard.AddEarnings(player: Player, amount: number)
+	if testNoSave() then
+		return
+	end
 	local ods = ordered(Config.EarningsStoreName)
 	if ods and amount > 0 then
 		local ok, err = pcall(ods.IncrementAsync, ods, tostring(player.UserId), math.floor(amount))
@@ -159,6 +170,9 @@ function Leaderboard.AddEarnings(player: Player, amount: number)
 end
 
 function Leaderboard.SetCareer(player: Player, totalCleaned: number)
+	if testNoSave() then
+		return
+	end
 	local ods = ordered(Config.CareerStoreName)
 	if ods and totalCleaned > 0 then
 		local ok, err = pcall(ods.SetAsync, ods, tostring(player.UserId), math.floor(totalCleaned))
@@ -197,6 +211,9 @@ end
 
 -- Adds spills to this week's count for a player; publishes their new total (WeeklyCleaned).
 function Leaderboard.AddWeekly(player: Player, spills: number)
+	if testNoSave() then
+		return
+	end
 	if spills <= 0 then
 		return
 	end
