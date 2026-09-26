@@ -844,7 +844,7 @@ local function buildStockroom(store: Instance)
 	end
 	-- loading dock: two roll-up bay doors (shut), bumpers
 	for _, x in { -5, 15 } do
-		part({ Name = "BayDoor", Size = Vector3.new(10, 12, 0.4), Position = Vector3.new(x, 6, -59.9), Material = M.CorrugatedSteel, Color = Color3.fromRGB(150, 150, 140), Parent = sr })
+		part({ Name = "BayDoor", Size = Vector3.new(10, 12, 0.4), Position = Vector3.new(x, 6, -59.9), Material = M.DiamondPlate, Color = Color3.fromRGB(150, 150, 140), Parent = sr })
 		part({ Name = "BayStripe", Size = Vector3.new(10, 0.6, 0.45), Position = Vector3.new(x, 1.2, -59.85), Color = Color3.fromRGB(220, 190, 40), CanCollide = false, Parent = sr })
 		for _, dx in { -5.6, 5.6 } do
 			part({ Name = "Bumper", Size = Vector3.new(0.8, 1.6, 0.6), Position = Vector3.new(x + dx, 1.2, -59.6), Material = M.Rubber, Color = Color3.fromRGB(25, 25, 25), Parent = sr })
@@ -874,7 +874,7 @@ local function buildStockroom(store: Instance)
 		end
 	end
 	-- roll-up door into the store (back wall, x 22..28)
-	local door = part({ Name = "StockroomDoor", Size = Vector3.new(6, 9, 0.4), Position = Vector3.new(25, 4.5, -20.5), Material = M.CorrugatedSteel, Color = Color3.fromRGB(150, 155, 150), Parent = sr })
+	local door = part({ Name = "StockroomDoor", Size = Vector3.new(6, 9, 0.4), Position = Vector3.new(25, 4.5, -20.5), Material = M.DiamondPlate, Color = Color3.fromRGB(150, 155, 150), Parent = sr })
 	door:SetAttribute("ClosedCFrame", door.CFrame)
 	local ds = part({ Name = "StockroomSign", Size = Vector3.new(6, 1.4, 0.1), Position = Vector3.new(25, 10.2, -19.95), Color = Color3.fromRGB(230, 225, 210), CanCollide = false, Parent = sr })
 	local dg = surfaceGui(ds, Enum.NormalId.Front, 40)
