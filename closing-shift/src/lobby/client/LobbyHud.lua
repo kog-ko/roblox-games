@@ -1,6 +1,6 @@
 --!strict
--- Lobby UI: your cash, rank progress and weekly spills; SHOP and INVITE buttons; and the queue
--- panel while you're standing on a pad (the server publishes QueuePad / QueueCount / QueueCountdown).
+-- Lobby UI: your cash, rank progress and weekly spills; SHOP / STYLE / PARTY / JOBS / INVITE buttons;
+-- and the queue panel while you're on a pad (the server publishes QueuePad / QueueCount / QueueCountdown).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SocialService = game:GetService("SocialService")
@@ -51,7 +51,9 @@ local function button(parent: Instance, name: string, t: string, size: UDim2, po
 	return b
 end
 
-function LobbyHud.Start(openShop: () -> ())
+export type Actions = { Shop: () -> (), Style: () -> (), Party: () -> (), Jobs: () -> () }
+
+function LobbyHud.Start(actions: Actions)
 	local gui = new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, IgnoreGuiInset = false, Parent = player:WaitForChild("PlayerGui") })
 
 	-- you: cash, rank, this week
@@ -60,8 +62,19 @@ function LobbyHud.Start(openShop: () -> ())
 	local rank = text(me, "Rank", "TRAINEE", UDim2.new(1, -16, 0, 20), UDim2.fromOffset(8, 36))
 	local week = text(me, "Week", "", UDim2.new(1, -16, 0, 18), UDim2.fromOffset(8, 60), Color3.fromRGB(170, 190, 170))
 
-	local shopBtn = button(gui, "Shop", "SHOP", UDim2.fromOffset(150, 44), UDim2.new(0, 12, 0.45, -26), Vector2.new(0, 0.5), GOLD)
-	local inviteBtn = button(gui, "Invite", "INVITE: +10% PAY", UDim2.fromOffset(150, 44), UDim2.new(0, 12, 0.45, 26), Vector2.new(0, 0.5), Color3.fromRGB(110, 160, 220))
+	-- buttons: a 2x2 grid under the panel (clear of the phone joystick), then INVITE
+	local grid = {
+		{ "Shop", "SHOP", GOLD, actions.Shop },
+		{ "Style", "STYLE", Color3.fromRGB(230, 160, 230), actions.Style },
+		{ "Party", "PARTY", Color3.fromRGB(110, 160, 220), actions.Party },
+		{ "Jobs", "JOBS", Color3.fromRGB(150, 210, 140), actions.Jobs },
+	}
+	for i, b in grid do
+		local col, row = (i - 1) % 2, (i - 1) // 2
+		local btn = button(gui, b[1], b[2], UDim2.fromOffset(126, 38), UDim2.fromOffset(12 + col * 134, 100 + row * 44), Vector2.new(0, 0), b[3])
+		btn.Activated:Connect(b[4])
+	end
+	local inviteBtn = button(gui, "Invite", "INVITE FRIENDS: +10% PAY", UDim2.fromOffset(260, 34), UDim2.fromOffset(12, 190), Vector2.new(0, 0), Color3.fromRGB(110, 160, 220))
 
 	-- queue panel (only while on a pad)
 	local q = box(gui, "Queue", UDim2.fromOffset(360, 74), UDim2.new(0.5, 0, 1, -16), Vector2.new(0.5, 1))
@@ -100,7 +113,6 @@ function LobbyHud.Start(openShop: () -> ())
 	player.AttributeChanged:Connect(refresh)
 	refresh()
 
-	shopBtn.Activated:Connect(openShop)
 	inviteBtn.Activated:Connect(function()
 		local ok, can = pcall(SocialService.CanSendGameInviteAsync, SocialService, player)
 		if ok and can then

@@ -2,28 +2,57 @@
 
 You and up to 3 friends work the last shift at a 24-hour convenience store, in first person, with a PSX look. Mop every spill before 6:00 AM. The store gets wrong as the night goes on. The last spill is in the back room.
 
-It's a Rojo project. The whole store is built from Parts in code, so no `.rbxl` file is committed.
+The experience has two places:
+
+| Place | ID | Project | What happens there |
+|---|---|---|---|
+| **Lobby** (start place) | 104809971812455 | `lobby.project.json` | Everyone spawns in the Quik Stop parking lot: queue pads, parties, leaderboards, wardrobe (cosmetics), shop, upgrade lockers, job board, daily time clock, VIP lounge. Queues teleport each crew to its own private Shift server. |
+| **Shift** | 93047688567585 | `default.project.json` | The game itself: the store, the nights, the Manager. BACK TO LOBBY returns you. |
+
+Both are Rojo projects built from Parts in code, so no `.rbxl` file is committed. They share `src/shared`
+and the server modules the lobby lists in `lobby.project.json` (save data, economy, shop, cosmetics,
+jobs, name tags, leaderboards). The place IDs are in `Config.Places`.
 
 ## Getting it into Studio
 
 1. Install [Rojo](https://rojo.space) (the CLI and the Studio plugin).
-2. From this folder, run `rojo serve`. In Studio, open the Rojo plugin and click **Connect**.
-3. Press Play. The server builds `Workspace.Store` if it doesn't exist.
-4. Optional: to see and edit the store in edit mode, run this once in the command bar and save the place:
+2. Open the place you want to work on (Asset Manager > Places in Experience). From this folder run
+   `rojo serve` for the Shift place or `rojo serve lobby.project.json` for the Lobby, then click
+   **Connect** in the Rojo plugin.
+3. Press Play. The Shift server builds `Workspace.Store` and the Lobby server builds `Workspace.Lobby`
+   if they don't exist.
+4. Optional: to edit the map in edit mode, run this once in the command bar and save the place:
    ```lua
-   require(game.ServerScriptService.Server.StoreBuilder).Build()
+   require(game.ServerScriptService.Server.StoreBuilder).Build() -- Shift place
+   require(game.ServerScriptService.Server.LobbyBuilder).Build() -- Lobby place
    ```
-   If a `Store` already exists, the server uses it and only reapplies the lighting.
+
+Teleports don't run in Studio: a queue countdown in a Studio playtest ends with a notice instead.
+Playing the Shift place directly (not from a queue) uses its own in-store lobby, which is handy for testing.
 
 ## Publishing settings
 
-In Creator Hub (or Studio: Game Settings), set these for the experience:
+In Creator Hub (or Studio: Game Settings), set these:
 
-- **Max Players = 4.** The nights are tuned for a party of 1 to 4 sharing one set of spills, and the
-  Manager gets 15% faster for each extra player (`Config.Manager.SpeedPerExtraPlayer`).
+- **Max Players: Lobby 24, Shift 4.** The nights are tuned for a crew of 1 to 4 sharing one set of
+  spills, and the Manager gets 15% faster for each extra player (`Config.Manager.SpeedPerExtraPlayer`).
+  Queues never send more than `Config.Queue.MaxCrew` (4).
 - **API Services on** (Security), so DataStores save progress, cash and purchases.
+- Publish the **Shift place first**, then the Lobby, so a queue never sends players to an old version.
 - Passes, developer products and badges already exist and their IDs are in
   `src/shared/Data/Monetization.lua`. An ID of 0 hides that item in game.
+
+## Progression and economy
+
+- **Cash** comes from paychecks, the daily clock-in and jobs; it buys upgrades (lockers) and
+  cosmetics (wardrobe: `src/shared/Data/Cosmetics.lua`, some VIP-only). Everything is a direct
+  purchase; there are no random rewards.
+- **Jobs** (`src/shared/Data/Challenges.lua`): 3 daily and 2 weekly, the same for everyone, paid on completion.
+- **Ranks** come from lifetime spills cleaned (`Config.Ranks`); promotions are announced.
+- **Leaderboards**: Employee of the Week (spills you mopped yourself this week; top 3 get a trophy
+  tag), fastest shift per night (only runs with no Robux help), lifetime earnings (pay before VIP /
+  Starter Pack multipliers) and most spills ever.
+- **Parties**: invite players in the lobby; when the leader stands on a pad the party queues together.
 
 ## Where things live
 

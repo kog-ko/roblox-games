@@ -15,7 +15,9 @@
         "Monetization": { "$path": "src/server/Monetization.lua" },
         "Analytics": { "$path": "src/server/Analytics.lua" },
         "NameTags": { "$path": "src/server/NameTags.lua" },
-        "Leaderboard": { "$path": "src/server/Leaderboard.lua" }
+        "Leaderboard": { "$path": "src/server/Leaderboard.lua" },
+        "Cosmetics": { "$path": "src/server/Cosmetics.lua" },
+        "Jobs": { "$path": "src/server/Jobs.lua" }
       }
     },
     "StarterPlayer": {

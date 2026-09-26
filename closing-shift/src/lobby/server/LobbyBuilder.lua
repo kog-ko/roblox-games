@@ -4,7 +4,8 @@
 --
 -- Built from Parts in code (like the store). Names the rest of the lobby code looks for:
 --   SpawnPoint, QueuePads/<Key> (Pad, Sign/SignGui with Title, Sub, Status), Boards/<Key>
---   (BoardGui with Title, List), VendingMachine, MyLocker, VIPDoor, VIPLoungeSpawn, VIPLoungeExit.
+--   (BoardGui with Title, List), VendingMachine, MyLocker, VIPDoor, VIPLoungeSpawn, VIPLoungeExit,
+--   TimeClock (daily bonus), JobBoard (BoardGui/List), Wardrobe (cosmetics).
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -258,6 +259,56 @@ local function vipLounge(parent: Instance)
 	label(sg, "Label", "VIP LOUNGE", { TextColor3 = Color3.fromRGB(40, 25, 5) })
 end
 
+-- By the spawn: the time clock (daily clock-in bonus) and the job board (daily / weekly jobs).
+local function stations(parent: Instance)
+	local m = model("Stations", parent)
+	local board = part({ Name = "JobBoard", Size = Vector3.new(0.5, 9, 13), Position = Vector3.new(-24, 6.5, 14), Color = Color3.fromRGB(60, 45, 30), Material = M.WoodPlanks, Parent = m })
+	for _, dz in { -5.5, 5.5 } do
+		part({ Name = "Leg", Size = Vector3.new(0.4, 2, 0.4), Position = Vector3.new(-24, 1, 14 + dz), Material = M.Metal, Color = STEEL, Parent = m })
+	end
+	local g = surfaceGui(board, Enum.NormalId.Right, 30)
+	g.Name = "BoardGui"
+	label(g, "Title", "JOB BOARD", { Size = UDim2.new(1, 0, 0, 40), TextColor3 = Color3.fromRGB(255, 225, 150) })
+	label(g, "List", "loading...", {
+		Position = UDim2.new(0, 12, 0, 46), Size = UDim2.new(1, -24, 1, -52), TextScaled = false, TextSize = 18, TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextColor3 = Color3.fromRGB(240, 230, 200),
+	})
+	local bl = Instance.new("SurfaceLight")
+	bl.Face = Enum.NormalId.Right
+	bl.Range = 10
+	bl.Brightness = 0.8
+	bl.Color = WARM
+	bl.Parent = board
+	-- time clock on a post
+	part({ Name = "ClockPost", Size = Vector3.new(0.5, 4, 0.5), Position = Vector3.new(-23, 2, 23), Material = M.Metal, Color = STEEL, Parent = m })
+	local clock = part({ Name = "TimeClock", Size = Vector3.new(1.4, 2, 1.6), Position = Vector3.new(-23, 5, 23), Material = M.Metal, Color = Color3.fromRGB(150, 140, 110), Parent = m })
+	local cg = surfaceGui(clock, Enum.NormalId.Right, 40)
+	label(cg, "Label", "CLOCK IN\nDAILY BONUS", { Size = UDim2.fromScale(1, 0.5), TextColor3 = Color3.fromRGB(30, 30, 30) })
+end
+
+-- The wardrobe: a clothing rack and a mirror; the prompt opens the cosmetics shop.
+local function wardrobe(parent: Instance)
+	local m = model("WardrobeArea", parent)
+	local cx, cz = 40, 12
+	part({ Name = "Rug", Size = Vector3.new(16, 0.2, 12), Position = Vector3.new(cx, 0.1, cz), Material = M.Fabric, Color = Color3.fromRGB(70, 30, 60), Parent = m })
+	part({ Name = "RackBar", Size = Vector3.new(10, 0.3, 0.3), Position = Vector3.new(cx, 6, cz - 4), Material = M.Metal, Color = STEEL, Parent = m })
+	for _, dx in { -5, 5 } do
+		part({ Name = "RackLeg", Size = Vector3.new(0.3, 6, 0.3), Position = Vector3.new(cx + dx, 3, cz - 4), Material = M.Metal, Color = STEEL, Parent = m })
+	end
+	local colors = { Color3.fromRGB(170, 35, 30), Color3.fromRGB(35, 60, 130), Color3.fromRGB(240, 120, 20), Color3.fromRGB(15, 15, 18), Color3.fromRGB(150, 220, 255), Color3.fromRGB(230, 190, 60) }
+	for i, c in colors do
+		part({ Name = "Vest", Size = Vector3.new(1.2, 2.4, 0.4), Position = Vector3.new(cx - 4.2 + (i - 1) * 1.7, 4.6, cz - 4), Color = c, CanCollide = false, Parent = m })
+	end
+	local mirror = part({ Name = "Wardrobe", Size = Vector3.new(4, 8, 0.4), Position = Vector3.new(cx + 7, 4, cz - 5), Material = M.Glass, Color = Color3.fromRGB(180, 200, 210), Reflectance = 0.6, Parent = m })
+	local sign = part({ Name = "Sign", Size = Vector3.new(10, 2, 0.3), Position = Vector3.new(cx, 9, cz - 4.2), Material = M.Neon, Color = Color3.fromRGB(200, 90, 200), Parent = m })
+	local sg = surfaceGui(sign, Enum.NormalId.Back, 20)
+	label(sg, "Label", "WARDROBE", { TextColor3 = Color3.fromRGB(30, 5, 30) })
+	local ml = Instance.new("PointLight")
+	ml.Range = 14
+	ml.Color = Color3.fromRGB(230, 170, 230)
+	ml.Parent = mirror
+end
+
 function LobbyBuilder.SetupLighting()
 	Lighting.ClockTime = 0.5
 	Lighting.Brightness = 1.5
@@ -300,6 +351,8 @@ function LobbyBuilder.Build(): Model
 	storefront(lobby)
 	shopArea(lobby)
 	vipLounge(lobby)
+	stations(lobby)
+	wardrobe(lobby)
 	local pads = folder("QueuePads", lobby)
 	for i, info in LobbyBuilder.Pads do
 		queuePad(pads, info, -39 + (i - 1) * 26)

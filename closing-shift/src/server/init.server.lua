@@ -46,6 +46,8 @@ local Manager = require(script.Manager)
 local RoundManager = require(script.RoundManager)
 local ShiftBoard = require(script.ShiftBoard)
 local NameTags = require(script.NameTags)
+local Cosmetics = require(script.Cosmetics)
+local Jobs = require(script.Jobs)
 
 -- analytics listens first so it sees every profile load; the cash and purchase hooks feed it
 Analytics.Init()
@@ -68,6 +70,8 @@ Manager.Init(s)
 RoundManager.Init(s)
 ShiftBoard.Init(s)
 NameTags.Init()
+Cosmetics.Init({ Trails = false }) -- no trails in the cramped, dark store
+Jobs.Init()
 task.spawn(RoundManager.Run)
 
 -- Flashlight on/off is cosmetic: store it so every client can draw the beam.

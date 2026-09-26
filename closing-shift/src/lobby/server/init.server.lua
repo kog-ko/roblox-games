@@ -35,8 +35,12 @@ local Economy = require(script.Economy)
 local Monetization = require(script.Monetization)
 local Leaderboard = require(script.Leaderboard)
 local NameTags = require(script.NameTags)
+local Cosmetics = require(script.Cosmetics)
+local Jobs = require(script.Jobs)
 local Queue = require(script.Queue)
 local LobbyBoards = require(script.LobbyBoards)
+local Party = require(script.Party)
+local Stations = require(script.Stations)
 
 Analytics.Init()
 Economy.OnCashChanged = Analytics.Cash
@@ -51,8 +55,12 @@ Economy.Init(l)
 Monetization.Init(l)
 Leaderboard.Init(l) -- trophies and weekly counts (the lobby's boards are LobbyBoards)
 NameTags.Init()
+Cosmetics.Init({ Trails = true })
+Jobs.Init()
+Party.Init()
 Queue.Init(l)
 LobbyBoards.Init(l)
+Stations.Init(l)
 
 if game:GetService("RunService"):IsStudio() then
 	_G.ClosingShiftLobby = {

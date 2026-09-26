@@ -15,12 +15,20 @@ local Flashlight = {}
 local player = Players.LocalPlayer :: Player
 local FL = Config.Flashlight
 
+local DEFAULT_BEAM = Color3.fromRGB(255, 244, 214)
+
+-- A player's beam colour: the BeamColor cosmetic (a Color3 attribute) or warm white.
+local function beamColor(p: Player): Color3
+	local c = p:GetAttribute("BeamColor")
+	return if typeof(c) == "Color3" then c else DEFAULT_BEAM
+end
+
 local function spot(parent: Instance): SpotLight
 	local s = Instance.new("SpotLight")
 	s.Face = Enum.NormalId.Front
 	s.Brightness = FL.Brightness
 	s.Range = FL.Range
-	s.Color = Color3.fromRGB(255, 244, 214)
+	s.Color = DEFAULT_BEAM
 	s.Shadows = false
 	s.Enabled = false
 	s.Parent = parent
@@ -87,6 +95,7 @@ local function watchOthers()
 		end
 		if light then
 			light.Angle = angleFor(p)
+			light.Color = beamColor(p)
 			light.Enabled = on
 		end
 	end
@@ -125,6 +134,10 @@ function Flashlight.Start()
 	rig.Transparency = 1
 	rig.Size = Vector3.one * 0.2
 	local light = spot(rig)
+	light.Color = beamColor(player)
+	player:GetAttributeChangedSignal("BeamColor"):Connect(function()
+		light.Color = beamColor(player)
+	end)
 
 	local on = false
 	local battery = batteryMax()

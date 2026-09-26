@@ -16,6 +16,7 @@ local Manager = require(script.Parent.Manager)
 local Economy = require(script.Parent.Economy)
 local ServerBoosts = require(script.Parent.ServerBoosts)
 local Analytics = require(script.Parent.Analytics)
+local Jobs = require(script.Parent.Jobs)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
@@ -278,6 +279,24 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 		end
 		local pay = Economy.Paycheck(p, rules, cleanTime, finalCleaner == p)
 		task.spawn(Leaderboard.AddEarnings, p, pay.Earned)
+		-- daily / weekly jobs
+		Jobs.Record(p, "clean", (p:GetAttribute("Cleaned") or 0) :: number)
+		if finalCleaner == p then
+			Jobs.Record(p, "backroom", 1)
+		end
+		if ((p:GetAttribute("CrewFriends") or 0) :: number) > 0 then
+			Jobs.Record(p, "crew", 1)
+		end
+		if cleanTime then
+			Jobs.Record(p, "win", 1)
+			Jobs.Record(p, "winNight", 1, rules.Night)
+			if rules.Manager.Enabled and not p:GetAttribute("CaughtThisShift") then
+				Jobs.Record(p, "noCatch", 1)
+			end
+			if cleanTime < rules.ShiftLength * Config.Pay.FastFraction then
+				Jobs.Record(p, "fast", 1)
+			end
+		end
 		if RoundManager.OnShiftResult then
 			task.spawn(RoundManager.OnShiftResult, p, cleanTime ~= nil)
 		end

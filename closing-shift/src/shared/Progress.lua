@@ -30,4 +30,35 @@ function Progress.WeekEnds(week: number): number
 	return FIRST_MONDAY + (week + 1) * WEEK
 end
 
+-- Days (UTC) since the epoch: the daily jobs and the daily bonus roll over at midnight UTC.
+function Progress.Day(t: number?): number
+	return math.floor((t or os.time()) / 86400)
+end
+
+-- Picks count jobs from a pool, the same for everyone on a given day/week (seeded shuffle).
+local function pick(pool: { any }, count: number, seed: number): { any }
+	local order = {}
+	for i = 1, #pool do
+		order[i] = i
+	end
+	local rng = Random.new(seed)
+	for i = #order, 2, -1 do
+		local j = rng:NextInteger(1, i)
+		order[i], order[j] = order[j], order[i]
+	end
+	local out = {}
+	for i = 1, math.min(count, #pool) do
+		table.insert(out, pool[order[i]])
+	end
+	return out
+end
+
+function Progress.DailyJobs(day: number?): { any }
+	return pick(Config.Challenges.Daily, Config.Challenges.DailyCount, 1000 + (day or Progress.Day()))
+end
+
+function Progress.WeeklyJobs(week: number?): { any }
+	return pick(Config.Challenges.Weekly, Config.Challenges.WeeklyCount, 500000 + (week or Progress.Week()))
+end
+
 return Progress

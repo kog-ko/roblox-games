@@ -76,7 +76,21 @@ function NameTags.Refresh(player: Player)
 	if type(trophy) == "number" and TROPHY[trophy] then
 		line(bb, "Trophy", TROPHY[trophy], TROPHY_COLORS[trophy], 1)
 	end
-	line(bb, "Rank", (if vip then "VIP · " else "") .. rankName, if vip then GOLD else PLAIN, 2)
+	-- the Tag cosmetic picks the colour; otherwise gold for VIPs
+	local tagColor = player:GetAttribute("TagColor")
+	local color = if typeof(tagColor) == "Color3" then tagColor elseif vip then GOLD else PLAIN
+	line(bb, "Rank", (if vip then "VIP · " else "") .. rankName, color, 2)
+	if player:GetAttribute("TagRainbow") then
+		local rankLabel = bb:FindFirstChild("Rank") :: TextLabel
+		rankLabel.TextColor3 = Color3.new(1, 1, 1)
+		local keys = {}
+		for i = 0, 6 do
+			table.insert(keys, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 0.75, 1)))
+		end
+		local grad = Instance.new("UIGradient")
+		grad.Color = ColorSequence.new(keys)
+		grad.Parent = rankLabel
+	end
 	for _, c in bb:GetChildren() do
 		if c:IsA("TextLabel") then
 			c.Size = UDim2.new(1, 0, 0, 22)
@@ -89,7 +103,7 @@ function NameTags.Init()
 	local function onPlayer(player: Player)
 		-- the saved total arrives after joining; only growth from there on is a promotion
 		local lastTotal = player:GetAttribute("TotalCleaned")
-		for _, attr in { "VIP", "WeeklyTrophy", "TotalCleaned" } do
+		for _, attr in { "VIP", "WeeklyTrophy", "TotalCleaned", "TagColor", "TagRainbow" } do
 			player:GetAttributeChangedSignal(attr):Connect(function()
 				-- TotalCleaned changes every spill; only rebuild when the rank actually changes
 				if attr == "TotalCleaned" then

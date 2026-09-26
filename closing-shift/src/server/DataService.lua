@@ -25,6 +25,8 @@ export type Profile = {
 	GiftedPasses: { [string]: boolean }, -- passes received as gifts
 	Starter: { OfferUntil: number, Bought: boolean }, -- Starter Pack offer window (0 = never offered)
 	DoublePayUntil: number, -- os.time() when a 2x paycheck boost ends
+	Cosmetics: { Owned: { [string]: boolean }, Equipped: { [string]: string } }, -- item ids; slot -> item id
+	Jobs: { Day: number, Week: number, Progress: { [string]: number }, Done: { [string]: boolean } }, -- challenges
 	LoadFailed: boolean?,
 }
 
@@ -94,6 +96,8 @@ local function blank(): Profile
 		GiftedPasses = {},
 		Starter = { OfferUntil = 0, Bought = false },
 		DoublePayUntil = 0,
+		Cosmetics = { Owned = {}, Equipped = {} },
+		Jobs = { Day = 0, Week = 0, Progress = {}, Done = {} },
 	}
 end
 
@@ -175,6 +179,40 @@ local function fromStored(data: any): Profile
 		p.Starter.Bought = data.Starter.Bought == true
 	end
 	p.DoublePayUntil = tonumber(data.DoublePayUntil) or 0
+	if type(data.Cosmetics) == "table" then
+		if type(data.Cosmetics.Owned) == "table" then
+			for k, v in data.Cosmetics.Owned do
+				if v == true then
+					p.Cosmetics.Owned[tostring(k)] = true
+				end
+			end
+		end
+		if type(data.Cosmetics.Equipped) == "table" then
+			for k, v in data.Cosmetics.Equipped do
+				if type(v) == "string" then
+					p.Cosmetics.Equipped[tostring(k)] = v
+				end
+			end
+		end
+	end
+	if type(data.Jobs) == "table" then
+		p.Jobs.Day = tonumber(data.Jobs.Day) or 0
+		p.Jobs.Week = tonumber(data.Jobs.Week) or 0
+		if type(data.Jobs.Progress) == "table" then
+			for k, v in data.Jobs.Progress do
+				if type(v) == "number" then
+					p.Jobs.Progress[tostring(k)] = v
+				end
+			end
+		end
+		if type(data.Jobs.Done) == "table" then
+			for k, v in data.Jobs.Done do
+				if v == true then
+					p.Jobs.Done[tostring(k)] = true
+				end
+			end
+		end
+	end
 	return p
 end
 
@@ -282,6 +320,15 @@ function DataService.Save(player: Player): boolean
 				Bought = p.Starter.Bought or old.Starter.Bought,
 			}
 			out.DoublePayUntil = math.max(p.DoublePayUntil, old.DoublePayUntil)
+			-- bought cosmetics are never lost; what's equipped and job progress follow this session
+			for k in old.Cosmetics.Owned do
+				out.Cosmetics.Owned[k] = true
+			end
+			for k in p.Cosmetics.Owned do
+				out.Cosmetics.Owned[k] = true
+			end
+			out.Cosmetics.Equipped = table.clone(p.Cosmetics.Equipped)
+			out.Jobs = p.Jobs
 			return out
 		end)
 	end)

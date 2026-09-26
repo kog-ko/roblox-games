@@ -4,6 +4,8 @@
 -- sent to a fresh private server of the shift place, with the night in the teleport data.
 --   Night pads: everyone on them must have that night unlocked (others see "LOCKED").
 --   Quick Play: the best night every player on the pad has unlocked.
+--   Parties: when a party leader is on a pad, the whole party queues with them (wherever they
+--   stand); other party members can't queue on their own.
 -- Players' queue state is published as attributes for the HUD: QueuePad, QueueCount, QueueCountdown.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +13,7 @@ local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.Rules)
+local Party = require(script.Parent.Party)
 
 local Queue = {}
 
@@ -26,6 +29,7 @@ type PadState = {
 
 local pads: { PadState } = {}
 local cooldown: { [Player]: number } = {} -- after a failed teleport
+local partyHint: { [Player]: number } = {} -- when a party member may be told "your leader picks" again
 local Banner: RemoteEvent
 
 local function unlocked(p: Player): number
@@ -118,17 +122,37 @@ local function tick()
 		-- who is standing on the pad (first come, first served up to the crew size)
 		local members = {}
 		local locked = 0
+		local function follower(p: Player): boolean
+			local leader = Party.LeaderOf(p)
+			return leader ~= nil and leader ~= p
+		end
 		for _, p in state.Members do
-			if p.Parent and onPad(p, state.Pad) and (cooldown[p] or 0) < now then
+			if p.Parent and not follower(p) and onPad(p, state.Pad) and (cooldown[p] or 0) < now then
 				table.insert(members, p)
 			end
 		end
 		for _, p in Players:GetPlayers() do
 			if not table.find(members, p) and onPad(p, state.Pad) and (cooldown[p] or 0) < now then
-				if state.Night and unlocked(p) < state.Night then
+				if follower(p) then
+					if (partyHint[p] or 0) < now then
+						partyHint[p] = now + 10
+						Banner:FireClient(p, "YOUR PARTY LEADER PICKS THE PAD", "Queue")
+					end
+				elseif state.Night and unlocked(p) < state.Night then
 					locked += 1
 				elseif #members < Config.Queue.MaxCrew then
 					table.insert(members, p)
+				end
+			end
+		end
+		-- leaders bring their party along
+		for _, leader in table.clone(members) do
+			if Party.LeaderOf(leader) == leader then
+				for _, m in Party.Members(leader) do
+					if m ~= leader and not table.find(members, m) and not taken[m] and #members < Config.Queue.MaxCrew
+						and (cooldown[m] or 0) < now and (state.Night == nil or unlocked(m) >= state.Night) then
+						table.insert(members, m)
+					end
 				end
 			end
 		end
@@ -184,6 +208,7 @@ function Queue.Init(lobby: Instance)
 	end
 	Players.PlayerRemoving:Connect(function(p)
 		cooldown[p] = nil
+		partyHint[p] = nil
 	end)
 	task.spawn(function()
 		while true do

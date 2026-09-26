@@ -1,6 +1,15 @@
 --!strict
--- Builds the Mop tool from Parts. Gold version for the Industrial Mop pass.
+-- Builds the Mop tool from Parts. Gold version for the Industrial Mop pass; a mop skin
+-- (the MopSkin cosmetic, see Data/Cosmetics.lua) repaints it and wins over the gold.
+local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local Mop = {}
+
+local skins: { [string]: any } = {}
+for _, item in Config.Cosmetics.Items do
+	if item.Slot == "Mop" then
+		skins[item.Id] = item
+	end
+end
 
 local function make(gold: boolean): Tool
 	local tool = Instance.new("Tool")
@@ -51,6 +60,16 @@ function Mop.Give(player: Player)
 		return
 	end
 	local tool = templates[gold]:Clone()
+	local skin = skins[(player:GetAttribute("MopSkin") or "") :: string]
+	if skin and skin.Color then
+		local handle = tool:FindFirstChild("Handle") :: BasePart
+		local head = tool:FindFirstChild("MopHead") :: BasePart
+		local material = (Enum.Material :: any)[skin.Material or "SmoothPlastic"]
+		handle.Color = skin.Color
+		handle.Material = material
+		head.Color = skin.Color2 or skin.Color
+		head.Material = material
+	end
 	tool.Parent = backpack
 	local function equip()
 		local char = player.Character
