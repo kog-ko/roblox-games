@@ -9,7 +9,7 @@ if not remotes then
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
 end
-for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight", "Caught", "BuyUpgrade", "RequestPurchase", "Banner", "Offer", "ReturnToLobby" } do
+for _, name in { "ReadyUp", "RequestCoffee", "Results", "PayoffCue", "ShowNote", "Flashlight", "Cleaned", "PickNight", "Caught", "BuyUpgrade", "RequestPurchase", "Banner", "Offer", "ReturnToLobby", "Grab", "GrabResult" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name
@@ -34,6 +34,8 @@ end
 local s = store :: Instance
 
 local DataService = require(script.DataService)
+local Achievements = require(script.Achievements)
+local LateCustomer = require(script.LateCustomer)
 local Analytics = require(script.Analytics)
 local Leaderboard = require(script.Leaderboard)
 local SpillService = require(script.SpillService)
@@ -59,10 +61,13 @@ Monetization.OnPurchased = function(player, key)
 	Analytics.Event(player, "PromptBought", 1, key)
 end
 DataService.Init()
+Achievements.Init()
+Economy.OnStreak = Achievements.Check
 Economy.Init(s)
 Leaderboard.Init(s)
 SpillService.Init(s)
 EventDirector.Init(s)
+LateCustomer.Init(s)
 Payoff.Init(s)
 ServerBoosts.Init(s)
 Monetization.Init(s)

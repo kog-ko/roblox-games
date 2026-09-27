@@ -2,6 +2,7 @@
 -- Party window (PARTY button): who's in your party, LEAVE, and everyone else in this lobby
 -- server with an INVITE button. Invites you receive pop up with ACCEPT / DECLINE.
 local Players = game:GetService("Players")
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -28,7 +29,7 @@ end
 
 local function button(parent: Instance, t: string, size: UDim2, pos: UDim2, color: Color3): TextButton
 	local b = new("TextButton", {
-		Text = t, Size = size, Position = pos, BackgroundColor3 = color, BorderSizePixel = 0, Font = Enum.Font.Arcade,
+		Text = t, Size = size, Position = pos, BackgroundColor3 = color, BorderSizePixel = 0, FontFace = Fonts.Body,
 		TextScaled = true, TextColor3 = Color3.fromRGB(15, 15, 15), Parent = parent,
 	})
 	new("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = b })
@@ -37,7 +38,7 @@ end
 
 local function label(parent: Instance, t: string, size: UDim2, pos: UDim2, color: Color3?): TextLabel
 	return new("TextLabel", {
-		Text = t, Size = size, Position = pos, BackgroundTransparency = 1, Font = Enum.Font.Arcade, TextScaled = true,
+		Text = t, Size = size, Position = pos, BackgroundTransparency = 1, FontFace = Fonts.Body, TextScaled = true,
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = color or Color3.fromRGB(230, 230, 220), Parent = parent,
 	})
 end

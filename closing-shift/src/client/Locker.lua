@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local BuyUpgrade = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("BuyUpgrade") :: RemoteEvent
 
 local Locker = {}
@@ -19,7 +20,7 @@ local function text(parent: Instance, t: string, size: UDim2, pos: UDim2, color:
 	l.BackgroundTransparency = 1
 	l.Size = size
 	l.Position = pos
-	l.Font = Enum.Font.Arcade
+	l.FontFace = Fonts.Body
 	l.TextScaled = true
 	l.TextColor3 = color or INK
 	l.TextXAlignment = align or Enum.TextXAlignment.Left
@@ -79,7 +80,7 @@ function Locker.Start()
 		buy.Position = UDim2.new(1, -10, 0.5, 0)
 		buy.Size = UDim2.fromOffset(140, 48)
 		buy.BorderSizePixel = 0
-		buy.Font = Enum.Font.Arcade
+		buy.FontFace = Fonts.Body
 		buy.TextScaled = true
 		buy.TextColor3 = Color3.fromRGB(15, 15, 15)
 		buy.Parent = row
@@ -96,7 +97,7 @@ function Locker.Start()
 	close.Size = UDim2.fromOffset(140, 40)
 	close.BackgroundColor3 = Color3.fromRGB(90, 90, 85)
 	close.BorderSizePixel = 0
-	close.Font = Enum.Font.Arcade
+	close.FontFace = Fonts.Body
 	close.TextScaled = true
 	close.Text = "CLOSE"
 	close.Modal = true -- frees the mouse from first person while open

@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Progress = require(ReplicatedStorage.Shared.Progress)
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Banner = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Banner") :: RemoteEvent
 
 local NameTags = {}
@@ -20,7 +21,7 @@ local function line(parent: Instance, name: string, text: string, color: Color3,
 	t.Name = name
 	t.BackgroundTransparency = 1
 	t.Size = UDim2.fromScale(1, 0.5)
-	t.Font = Enum.Font.Arcade
+	t.FontFace = Fonts.Bold
 	t.TextScaled = true
 	t.TextColor3 = color
 	t.TextStrokeTransparency = 0.3

@@ -7,6 +7,7 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local Wardrobe = {}
@@ -31,7 +32,7 @@ end
 
 local function button(parent: Instance, name: string, t: string, size: UDim2, pos: UDim2, color: Color3): TextButton
 	local b = new("TextButton", {
-		Name = name, Text = t, Size = size, Position = pos, BackgroundColor3 = color, BorderSizePixel = 0, Font = Enum.Font.Arcade,
+		Name = name, Text = t, Size = size, Position = pos, BackgroundColor3 = color, BorderSizePixel = 0, FontFace = Fonts.Body,
 		TextScaled = true, TextColor3 = Color3.fromRGB(15, 15, 15), Parent = parent,
 	})
 	new("UIPadding", { PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), Parent = b })
@@ -66,11 +67,11 @@ function Wardrobe.Start(openShop: () -> ())
 	fit()
 	new("TextLabel", {
 		Text = "WARDROBE", Size = UDim2.new(1, -140, 0, 36), Position = UDim2.fromOffset(12, 6), BackgroundTransparency = 1,
-		Font = Enum.Font.Arcade, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(230, 160, 230), Parent = frame,
+		FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(230, 160, 230), Parent = frame,
 	})
 	local cashText = new("TextLabel", {
 		Text = "$0", Size = UDim2.fromOffset(120, 28), Position = UDim2.new(1, -176, 0, 10), BackgroundTransparency = 1,
-		Font = Enum.Font.Arcade, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = GOLD, Parent = frame,
+		FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = GOLD, Parent = frame,
 	})
 	local close = button(frame, "Close", "X", UDim2.fromOffset(40, 36), UDim2.new(1, -48, 0, 6), Color3.fromRGB(200, 70, 60))
 	local tabs = new("Frame", { Size = UDim2.new(1, -24, 0, 34), Position = UDim2.fromOffset(12, 48), BackgroundTransparency = 1, Parent = frame })
@@ -118,13 +119,13 @@ function Wardrobe.Start(openShop: () -> ())
 			end
 			new("TextLabel", {
 				Text = item.Name .. (if item.Vip then "  (VIP)" else ""), Size = UDim2.new(1, -250, 0, 24), Position = UDim2.fromOffset(50, 4),
-				BackgroundTransparency = 1, Font = Enum.Font.Arcade, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
+				BackgroundTransparency = 1, FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
 				TextColor3 = if item.Vip then GOLD else Color3.fromRGB(230, 230, 220), Parent = row,
 			})
 			local have = (item.Price == 0 and not item.Earned) or owned(item.Id)
 			new("TextLabel", {
 				Text = if have then "OWNED" elseif item.Earned then "EARN: " .. (item.Hint or "?") else "$" .. item.Price, Size = UDim2.new(1, -250, 0, 16), Position = UDim2.fromOffset(50, 28),
-				BackgroundTransparency = 1, Font = Enum.Font.Arcade, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
+				BackgroundTransparency = 1, FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
 				TextColor3 = if have then Color3.fromRGB(150, 220, 150) elseif item.Earned then Color3.fromRGB(150, 200, 255) elseif cash >= item.Price then GOLD else Color3.fromRGB(200, 120, 110), Parent = row,
 			})
 			local b

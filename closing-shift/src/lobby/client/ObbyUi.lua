@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 
 local ObbyUi = {}
 
@@ -23,7 +24,7 @@ local function timer()
 	label.Size = UDim2.fromOffset(360, 44)
 	label.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
 	label.BackgroundTransparency = 0.3
-	label.Font = Enum.Font.Arcade
+	label.FontFace = Fonts.Mono
 	label.TextScaled = true
 	label.TextColor3 = Color3.fromRGB(110, 230, 120)
 	label.TextStrokeTransparency = 0.4
@@ -63,6 +64,15 @@ local function bouncePads()
 			end
 			last = now
 			local power = (pad:GetAttribute("Power") or 80) :: number
+			local boing = Instance.new("Sound")
+			boing.SoundId = Config.Sounds.Bounce
+			boing.Volume = 0.5
+			boing.PlaybackSpeed = 1 + (math.random() - 0.5) * 0.2
+			boing.Parent = pad
+			boing:Play()
+			task.delay(4, function()
+				boing:Destroy()
+			end)
 			local v = root.AssemblyLinearVelocity
 			root.AssemblyLinearVelocity = Vector3.new(v.X, power, v.Z)
 		end)

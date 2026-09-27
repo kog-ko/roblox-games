@@ -17,12 +17,14 @@ Config.Upgrades = require(Data:WaitForChild("Upgrades"))
 Config.Monetization = require(Data:WaitForChild("Monetization"))
 Config.Cosmetics = require(Data:WaitForChild("Cosmetics"))
 Config.Challenges = require(Data:WaitForChild("Challenges"))
+Config.Achievements = require(Data:WaitForChild("Achievements"))
 Config.DefaultNight = 1
 Config.LikeGoal = 1000 -- shown after Night 3: "Like the game to unlock Nights 4-5 faster!"
 Config.DefaultStore = "QuikStop"
 
 -- Round flow (seconds). Shift length and spill count are per night (Data/Nights).
 Config.IntermissionTime = 15
+Config.PostShiftWait = 60 -- after a shift: seconds to press NEXT SHIFT before the crew goes back to the lobby
 -- Store zones and the crew size that opens each (see Data/Nights for how spills and time scale)
 Config.Zones = { Floor = 1, Stockroom = 2, Freezer = 3 }
 Config.BigSpillScale = 1.6 -- big spills are this much bigger
@@ -81,12 +83,19 @@ Config.DataRetries = 3
 
 -- PSX look. Every heavy effect has an on/off switch here.
 Config.PSX = {
-	FieldOfView = 70,
+	FieldOfView = 80, -- wide, like a bodycam lens
 	CameraSnap = true, -- snap camera rotation to small steps for a low-framerate feel
 	SnapDegrees = 0.6,
 	HeadBob = true,
 	BobWalk = 0.08, -- studs
 	BobSprint = 0.16,
+	-- bodycam: the camera rolls into strafes and turns, and lags a touch behind the head
+	Tilt = true,
+	TiltStrafe = 2.6, -- degrees of roll at full sideways speed
+	TiltTurn = 0.018, -- degrees of roll per degree/second of turning
+	TiltMax = 5,
+	BodycamOsd = true, -- REC dot, date and time stamp, unit number
+	Grain = true, -- moving film grain
 	Overlay = true, -- scanlines + pixel grid
 	PixelGrid = true, -- faint vertical lines that, with the scanlines, read as big pixels
 	Vignette = true,
@@ -95,7 +104,7 @@ Config.PSX = {
 	Saturation = -0.55,
 	Contrast = 0.4,
 	Tint = Color3.fromRGB(200, 240, 225), -- green-cyan
-	FogDensity = 0.58,
+	FogDensity = 0.46,
 	FogHaze = 3,
 }
 
@@ -123,8 +132,8 @@ Config.Ranks = {
 
 -- Daily Shift Bonus: paid on your first shift each (UTC) day; grows on consecutive days.
 Config.Daily = {
-	PerStreakDay = 25, -- bonus = streak x this
-	MaxStreak = 7, -- the streak (and bonus) stops growing here
+	PerStreakDay = 25, -- bonus = streak x this...
+	MaxStreak = 7, -- ...up to this many days (the streak itself keeps counting; see Achievements.Streaks)
 }
 
 -- The Night Manager (speed is per night in Data/Nights)
@@ -140,16 +149,53 @@ Config.Manager = {
 	FreezeTime = 3, -- a caught player is frozen this long, then sent back to the counter
 	TimePenalty = 30, -- seconds taken off the shift clock per catch
 	CooldownAfterCatch = 4, -- he waits this long in the back room after a catch
-	Spawn = Vector3.new(44, 0, -7), -- back room, by the door
+	Spawn = Vector3.new(44, 0, -7), -- back room, by the door (StoreBuilder coordinates: pass through Layout.Map)
 	SpeedPerExtraPlayer = 0.15, -- +15% speed for each player beyond the first (co-op always has a watcher)
-	SoundRange = 25, -- studs at which his footsteps and hum fade out
+	SoundRange = 45, -- studs at which his footsteps and hum fade out
+	-- The grab: the camera turns to his face, then a skill check (press when the needle is in the
+	-- zone, Hits times in a row). Escape = no catch; fail = the usual catch, nothing extra.
+	Grab = {
+		Intro = 0.9, -- seconds of face-to-face before the check starts
+		Window = 3.4, -- seconds to land every hit
+		Hits = 2,
+		Zone = 0.22, -- zone width (fraction of the bar)
+		ZoneShrink = 0.035, -- narrower after each escape this shift...
+		MinZone = 0.09,
+		Period = 1.0, -- seconds for the needle to cross the bar
+		PeriodShrink = 0.12, -- ...and a faster needle
+		MinPeriod = 0.5,
+		EscapeStun = 4, -- seconds he stands still after you break free
+	},
+	-- Tension as he gets close (client): heartbeat, bodycam interference, a cue when he's behind you.
+	Tension = {
+		Range = 42, -- studs at which it starts
+		BehindRange = 16, -- within this and behind you: the "behind you" cue
+	},
+}
+
+-- The rare Late Customer (LateCustomer.lua): some nights someone walks in after closing.
+Config.LateCustomer = {
+	Chance = 0.12, -- per shift
+	MinNight = 2,
+	Delay = { Min = 50, Max = 200 }, -- seconds into the shift it walks in
+	StareTime = 3, -- seconds of being looked at (added up across the crew) until it's gone
+	Tip = 75, -- cash for everyone who looked at it when it goes
+	Speed = 6,
+	ReachDistance = 3,
+	JamTime = 12, -- seconds your flashlight is dead after it reaches you
+	MessEvery = 14, -- it tracks in a spill this often...
+	MaxMess = 4, -- ...up to this many
+	MaxTime = 120, -- then it leaves
 }
 
 -- Flashlight (F / touch). Battery drains while on and slowly recharges while off.
 Config.Flashlight = {
-	Brightness = 3,
-	Range = 45,
-	Angle = 50, -- degrees
+	Brightness = 4, -- the round beam
+	Range = 55,
+	Angle = 44, -- degrees
+	HotspotBrightness = 3.5, -- the brighter centre of the beam
+	HotspotAngle = 16,
+	Lag = 14, -- how quickly the beam catches up with where you look (higher = stiffer)
 	Battery = 45, -- seconds of light from full
 	RechargePerSecond = 0.5, -- battery seconds regained per second while off
 	MinToTurnOn = 3, -- a drained light won't switch back on until it has this much
@@ -176,6 +222,30 @@ Config.Sounds = {
 	UIClick = id(87437544236708), -- button presses
 	ManagerSteps = id(117471457171581), -- the Night Manager walking (only while he moves)
 	ManagerPresence = id(9112797020), -- low hum around the Night Manager
+	Heartbeat = id(9043365842), -- heartbeat loop as the Manager closes in (APM)
+	GrabScream = id(9041752524), -- his scream when he grabs you (APM)
+	JumpScare = id(9040287396), -- the hit under the scream (APM)
+	Whisper = id(9114228524), -- a whisper in your ear when he's behind you
+	Escape = id(9120769331), -- breaking free of a grab
+	-- lobby
+	CityNight = id(9112759731), -- distant traffic (loops)
+	Crickets = id(9112764573), -- (loops)
+	Fountain = id(9120557577), -- the mop-bucket fountain (loops, 3D)
+	NeonBuzz = id(9117072474), -- neon signs (loops, 3D)
+	Checkpoint = id(1839997929), -- obby checkpoint (APM)
+	ObbyFinish = id(1846011760), -- obby cleared (APM, first few seconds)
+	Bounce = id(1846544949), -- trampolines (APM)
+	ObbyFall = id(9119481927), -- into the mop water
+	QueueBeep = id(9117060347), -- queue countdown ticks
+}
+
+-- Music. All licensed for Roblox experiences (DistroKid catalogue). M toggles music on and off.
+Config.Music = {
+	Lobby = { id(140515672182827), id(70551940079407), id(138693920798127), id(94615661666814) }, -- night-drive lo-fi
+	Break = id(139799942555122), -- the store radio between shifts (played muffled)
+	ShiftCalm = id(117508801974613), -- "Feeling Uneasy": under every shift
+	ShiftDanger = id(127708788779804), -- "Room Pulse": swells as the Manager closes in
+	Volume = { Lobby = 0.28, Break = 0.3, ShiftCalm = 0.22, ShiftDanger = 0.5 },
 }
 Config.ScrubLoop = NumberRange.new(1, 3) -- seconds of the scrub clip looped while mopping
 Config.PitchVariation = 0.08 -- every one-shot plays at 1 +/- this speed so repeats don't sound robotic

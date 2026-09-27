@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local RoundManager = require(script.Parent.RoundManager)
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 
 local PickNight = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PickNight") :: RemoteEvent
 
@@ -33,7 +34,7 @@ local function render()
 		t.LayoutOrder = i
 		t.BackgroundTransparency = 1
 		t.Size = UDim2.new(1, 0, 0.3, -4)
-		t.Font = Enum.Font.Arcade
+		t.FontFace = Fonts.Mono
 		t.TextScaled = true
 		t.TextXAlignment = Enum.TextXAlignment.Left
 		local mark = if i == selected then "> " elseif i > unlocked then "x " else "  "

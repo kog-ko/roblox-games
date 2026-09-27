@@ -11,6 +11,7 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local LobbyExtras = require(script.Parent:WaitForChild("LobbyExtras"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 
 local LobbyBuilder = {}
 
@@ -81,7 +82,7 @@ local function label(parent: Instance, name: string, text: string, props: { [str
 	t.Name = name
 	t.BackgroundTransparency = 1
 	t.Size = UDim2.fromScale(1, 1)
-	t.Font = Enum.Font.Arcade
+	t.FontFace = Fonts.Sign
 	t.TextScaled = true
 	t.Text = text
 	t.TextColor3 = Color3.fromRGB(230, 230, 220)
@@ -234,17 +235,27 @@ local function vipLounge(parent: Instance)
 	local m = model("VIPLounge", parent)
 	local cx, cz = 62, 40
 	part({ Name = "Deck", Size = Vector3.new(30, 1, 24), Position = Vector3.new(cx, 0.5, cz), Material = M.WoodPlanks, Color = Color3.fromRGB(90, 60, 40), Parent = m })
-	-- walls with a gold rope along the top; the door is on the west side
+	-- walls (tall enough that nobody hops in) under a glass roof, with a gold trim; the door is on
+	-- the west side. The server also moves anyone without VIP back out (VIPZone, Monetization.lua).
 	for _, w in {
-		{ Vector3.new(30, 8, 1), Vector3.new(0, 4.5, -12) },
-		{ Vector3.new(30, 8, 1), Vector3.new(0, 4.5, 12) },
-		{ Vector3.new(1, 8, 24), Vector3.new(15, 4.5, 0) },
-		{ Vector3.new(1, 8, 9), Vector3.new(-15, 4.5, -7.5) },
-		{ Vector3.new(1, 8, 9), Vector3.new(-15, 4.5, 7.5) },
+		{ Vector3.new(30, 14, 1), Vector3.new(0, 7.5, -12) },
+		{ Vector3.new(30, 14, 1), Vector3.new(0, 7.5, 12) },
+		{ Vector3.new(1, 14, 24), Vector3.new(15, 7.5, 0) },
+		{ Vector3.new(1, 14, 9), Vector3.new(-15, 7.5, -7.5) },
+		{ Vector3.new(1, 14, 9), Vector3.new(-15, 7.5, 7.5) },
 	} do
 		part({ Name = "Wall", Size = w[1], Position = Vector3.new(cx, 0, cz) + w[2], Color = Color3.fromRGB(25, 22, 18), Transparency = 0.2, Parent = m })
-		part({ Name = "Rope", Size = Vector3.new(w[1].X + 0.2, 0.4, w[1].Z + 0.2), Position = Vector3.new(cx, 8.7, cz) + Vector3.new(w[2].X, 0, w[2].Z), Material = M.Neon, Color = Color3.fromRGB(255, 200, 70), CanCollide = false, Parent = m })
+		part({ Name = "Rope", Size = Vector3.new(w[1].X + 0.2, 0.4, w[1].Z + 0.2), Position = Vector3.new(cx, 14.7, cz) + Vector3.new(w[2].X, 0, w[2].Z), Material = M.Neon, Color = Color3.fromRGB(255, 200, 70), CanCollide = false, Parent = m })
 	end
+	-- the gap above the door and the roof
+	part({ Name = "Lintel", Size = Vector3.new(1, 6, 6), Position = Vector3.new(cx - 15, 11.5, cz), Color = Color3.fromRGB(25, 22, 18), Transparency = 0.2, Parent = m })
+	part({ Name = "Roof", Size = Vector3.new(31, 0.6, 25), Position = Vector3.new(cx, 14.8, cz), Material = M.Glass, Color = Color3.fromRGB(255, 225, 150), Transparency = 0.55, Parent = m })
+	part({ Name = "VIPZone", Size = Vector3.new(29, 14, 23), Position = Vector3.new(cx, 7.5, cz), Transparency = 1, CanCollide = false, CanQuery = false, CanTouch = false, Parent = m })
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 205, 130)
+	glow.Range = 22
+	glow.Brightness = 1.4
+	glow.Parent = part({ Name = "Chandelier", Shape = Enum.PartType.Ball, Size = Vector3.new(2, 2, 2), Position = Vector3.new(cx, 12.5, cz), Material = M.Neon, Color = Color3.fromRGB(255, 220, 150), CanCollide = false, Parent = m })
 	-- turned so its front faces out of the lounge: leaving puts you just outside it
 	local door = part({
 		Name = "VIPDoor", Size = Vector3.new(6, 8, 1), CFrame = CFrame.new(cx - 15, 4.5, cz) * CFrame.Angles(0, math.rad(90), 0),
@@ -256,7 +267,7 @@ local function vipLounge(parent: Instance)
 	part({ Name = "VIPLoungeExit", Size = Vector3.new(2, 4, 2), Position = Vector3.new(cx - 12, 2.5, cz), Transparency = 1, CanCollide = false, Parent = m })
 	-- a couch and a neon sign so it reads as the good spot from across the lot
 	part({ Name = "Couch", Size = Vector3.new(10, 2, 3), Position = Vector3.new(cx + 6, 2, cz + 9), Material = M.Fabric, Color = Color3.fromRGB(120, 30, 40), Parent = m })
-	local sign = part({ Name = "Sign", Size = Vector3.new(12, 3, 0.4), Position = Vector3.new(cx, 11, cz - 12), Material = M.Neon, Color = Color3.fromRGB(255, 200, 70), Parent = m })
+	local sign = part({ Name = "Sign", Size = Vector3.new(12, 3, 0.4), Position = Vector3.new(cx, 17, cz - 12), Material = M.Neon, Color = Color3.fromRGB(255, 200, 70), Parent = m })
 	local sg = surfaceGui(sign, Enum.NormalId.Back, 20)
 	label(sg, "Label", "VIP LOUNGE", { TextColor3 = Color3.fromRGB(40, 25, 5) })
 end
@@ -312,10 +323,11 @@ local function wardrobe(parent: Instance)
 end
 
 function LobbyBuilder.SetupLighting()
+	-- still night, but a well-lit lot: you should be able to see the whole lobby from anywhere
 	Lighting.ClockTime = 0.5
-	Lighting.Brightness = 1.5
-	Lighting.Ambient = Color3.fromRGB(115, 115, 128)
-	Lighting.OutdoorAmbient = Color3.fromRGB(100, 102, 120)
+	Lighting.Brightness = 2
+	Lighting.Ambient = Color3.fromRGB(150, 150, 165)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 152, 172)
 	Lighting.GlobalShadows = false
 	Lighting.EnvironmentDiffuseScale = 0
 	Lighting.EnvironmentSpecularScale = 0
@@ -326,7 +338,7 @@ function LobbyBuilder.SetupLighting()
 	end
 	local atm = Instance.new("Atmosphere")
 	atm.Name = "LobbyAtmosphere"
-	atm.Density = 0.22
+	atm.Density = 0.14
 	atm.Color = Color3.fromRGB(25, 28, 38)
 	atm.Decay = Color3.fromRGB(15, 16, 24)
 	atm.Glare = 0
@@ -334,9 +346,43 @@ function LobbyBuilder.SetupLighting()
 	atm.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Name = "LobbyColor"
-	cc.Saturation = Config.PSX.Saturation
-	cc.Contrast = Config.PSX.Contrast
+	cc.Saturation = Config.PSX.Saturation * 0.4 -- the lobby keeps more colour than the store
+	cc.Contrast = Config.PSX.Contrast * 0.5
+	cc.Brightness = 0.05
 	cc.Parent = Lighting
+end
+
+-- Tall floodlights around the edge of the lot, so the far corners (and the obbies) aren't dark.
+local function floodlights(parent: Instance)
+	local m = model("Floodlights", parent)
+	for _, x in { -165, 165 } do
+		for _, z in { -110, -60, -10, 40, 90 } do
+			part({ Name = "Pole", Size = Vector3.new(0.8, 30, 0.8), Position = Vector3.new(x, 15, z), Material = M.Metal, Color = STEEL, Parent = m })
+			local head = part({ Name = "Flood", Size = Vector3.new(3, 1.5, 3), Position = Vector3.new(x - math.sign(x) * 1.2, 30, z), Material = M.Neon, Color = Color3.fromRGB(235, 240, 255), CanCollide = false, Parent = m })
+			local l = Instance.new("SpotLight")
+			l.Face = Enum.NormalId.Bottom
+			l.Angle = 120
+			l.Range = 60
+			l.Brightness = 2.6
+			l.Color = Color3.fromRGB(225, 232, 255)
+			l.Parent = head
+		end
+	end
+	-- the back row, and the street side clear of the storefronts (x -77..77)
+	for _, pos in { { -110, -125 }, { -55, -125 }, { 55, -125 }, { 110, -125 }, { -140, 125 }, { -100, 125 }, { 100, 125 }, { 140, 125 } } do
+		local x, z = pos[1], pos[2]
+		do
+			part({ Name = "Pole", Size = Vector3.new(0.8, 30, 0.8), Position = Vector3.new(x, 15, z), Material = M.Metal, Color = STEEL, Parent = m })
+			local head = part({ Name = "Flood", Size = Vector3.new(3, 1.5, 3), Position = Vector3.new(x, 30, z - math.sign(z) * 1.2), Material = M.Neon, Color = Color3.fromRGB(235, 240, 255), CanCollide = false, Parent = m })
+			local l = Instance.new("SpotLight")
+			l.Face = Enum.NormalId.Bottom
+			l.Angle = 120
+			l.Range = 60
+			l.Brightness = 2.4
+			l.Color = Color3.fromRGB(225, 232, 255)
+			l.Parent = head
+		end
+	end
 end
 
 function LobbyBuilder.Build(): Model
@@ -351,6 +397,7 @@ function LobbyBuilder.Build(): Model
 		part({ Name = "Line", Size = Vector3.new(0.4, 0.05, 10), Position = Vector3.new(i * 9, 0.03, 50), Color = Color3.fromRGB(200, 200, 190), CanCollide = false, Parent = lobby })
 	end
 	storefront(lobby)
+	floodlights(lobby)
 	shopArea(lobby)
 	vipLounge(lobby)
 	stations(lobby)

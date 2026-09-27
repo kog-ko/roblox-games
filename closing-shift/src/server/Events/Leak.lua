@@ -4,6 +4,7 @@
 -- player while the others keep mopping.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Achievements = require(script.Parent.Parent.Achievements)
 
 return function(ctx)
 	local coolers = ctx.store:FindFirstChild("Coolers")
@@ -68,6 +69,7 @@ return function(ctx)
 		end
 		closed = true
 		prompt.Enabled = false
+		task.spawn(Achievements.Add, player, "LeaksShut")
 		light.Color = Color3.fromRGB(90, 220, 90)
 		wheel.Color = Color3.fromRGB(60, 160, 60)
 		local banner = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Banner")

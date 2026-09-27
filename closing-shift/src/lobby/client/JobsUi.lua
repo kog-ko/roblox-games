@@ -2,6 +2,7 @@
 -- Jobs window (JOBS button): your progress on today's and this week's jobs, from the Jobs
 -- attribute the server publishes (JSON). Jobs pay out automatically when finished.
 local HttpService = game:GetService("HttpService")
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
@@ -25,7 +26,7 @@ end
 
 local function label(parent: Instance, t: string, size: UDim2, pos: UDim2, color: Color3?): TextLabel
 	return new("TextLabel", {
-		Text = t, Size = size, Position = pos, BackgroundTransparency = 1, Font = Enum.Font.Arcade, TextScaled = true,
+		Text = t, Size = size, Position = pos, BackgroundTransparency = 1, FontFace = Fonts.Body, TextScaled = true,
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = color or Color3.fromRGB(230, 230, 220), Parent = parent,
 	})
 end
@@ -47,7 +48,7 @@ function JobsUi.Start()
 	label(frame, "JOBS", UDim2.new(1, -70, 0, 34), UDim2.fromOffset(12, 6), GOLD)
 	local close = new("TextButton", {
 		Text = "X", Size = UDim2.fromOffset(40, 34), Position = UDim2.new(1, -48, 0, 6), BackgroundColor3 = Color3.fromRGB(200, 70, 60),
-		BorderSizePixel = 0, Font = Enum.Font.Arcade, TextScaled = true, Parent = frame,
+		BorderSizePixel = 0, FontFace = Fonts.Body, TextScaled = true, Parent = frame,
 	})
 	local list = new("ScrollingFrame", {
 		Size = UDim2.new(1, -24, 1, -52), Position = UDim2.fromOffset(12, 46), BackgroundTransparency = 1, BorderSizePixel = 0,

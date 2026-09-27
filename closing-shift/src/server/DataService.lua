@@ -27,6 +27,7 @@ export type Profile = {
 	DoublePayUntil: number, -- os.time() when a 2x paycheck boost ends
 	Cosmetics: { Owned: { [string]: boolean }, Equipped: { [string]: string } }, -- item ids; slot -> item id
 	Jobs: { Day: number, Week: number, Progress: { [string]: number }, Done: { [string]: boolean } }, -- challenges
+	Achievements: { [string]: number }, -- achievement id -> os.time() earned
 	LoadFailed: boolean?,
 }
 
@@ -98,6 +99,7 @@ local function blank(): Profile
 		DoublePayUntil = 0,
 		Cosmetics = { Owned = {}, Equipped = {} },
 		Jobs = { Day = 0, Week = 0, Progress = {}, Done = {} },
+		Achievements = {},
 	}
 end
 
@@ -192,6 +194,13 @@ local function fromStored(data: any): Profile
 				if type(v) == "string" then
 					p.Cosmetics.Equipped[tostring(k)] = v
 				end
+			end
+		end
+	end
+	if type(data.Achievements) == "table" then
+		for k, v in data.Achievements do
+			if type(v) == "number" then
+				p.Achievements[tostring(k)] = v
 			end
 		end
 	end
@@ -334,6 +343,13 @@ function DataService.Save(player: Player): boolean
 			end
 			out.Cosmetics.Equipped = table.clone(p.Cosmetics.Equipped)
 			out.Jobs = p.Jobs
+			-- achievements are never lost
+			for k, v in old.Achievements do
+				out.Achievements[k] = v
+			end
+			for k, v in p.Achievements do
+				out.Achievements[k] = math.min(v, out.Achievements[k] or math.huge)
+			end
 			return out
 		end)
 	end)

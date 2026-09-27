@@ -1,6 +1,6 @@
 --!strict
 -- Tells the server where this player's camera is looking, ~10 times a second, while the Night
--- Manager exists. Unreliable on purpose: only the latest view matters. The server checks it.
+-- Manager (or the Late Customer) is in the store. Unreliable on purpose: only the latest view matters. The server checks it.
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
@@ -17,7 +17,7 @@ function ManagerView.Start()
 			return
 		end
 		acc = 0
-		if props:FindFirstChild("Manager") then
+		if props:FindFirstChild("Manager") or props:FindFirstChild("LateCustomer") then
 			ViewReport:FireServer(workspace.CurrentCamera.CFrame)
 		end
 	end)

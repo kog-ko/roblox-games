@@ -1,7 +1,10 @@
 --!strict
 -- The Night Manager. A tall faceless figure in a suit who walks toward the nearest player, but only
 -- while nobody has him on screen with a clear line of sight. In the dark you only "see" him if your
--- flashlight is on him. If he reaches you, you're sent back to the counter and the shift loses time.
+-- flashlight is on him. If he reaches you he grabs you: the camera is pulled round to his face and
+-- you get a short skill check (Config.Manager.Grab) to tear free. Break free and he staggers back;
+-- fail (or don't try) and it's the usual catch: sent back to the counter and the shift loses time.
+-- Failing the check costs nothing extra. Each escape in a shift makes the next check harder.
 --
 -- Each client reports its camera CFrame (ViewReport, ~10/s). The server ignores reports that aren't
 -- near that player's head or are stale, then checks the view cone and raycasts itself.
@@ -10,16 +13,21 @@ local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(ReplicatedStorage.Shared.Layout)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ViewReport = Remotes:WaitForChild("ViewReport") :: UnreliableRemoteEvent
 local CaughtRemote = Remotes:WaitForChild("Caught") :: RemoteEvent
+local GrabRemote = Remotes:WaitForChild("Grab") :: RemoteEvent
+local GrabResult = Remotes:WaitForChild("GrabResult") :: RemoteEvent
+local Banner = Remotes:WaitForChild("Banner") :: RemoteEvent
 
 local C = Config.Manager
 local Manager = {}
 -- Set by RoundManager: called with the caught player, and when a catch is undone (Second Chance).
 Manager.OnCatch = nil :: ((Player) -> ())?
 Manager.OnUndoCatch = nil :: ((Player) -> ())?
+Manager.OnEscape = nil :: ((Player) -> ())? -- broke free of a grab
 
 type CatchRecord = { pos: CFrame, t: number, undone: boolean }
 local catches: { [Player]: CatchRecord } = {}
@@ -39,7 +47,13 @@ local isWatched = false
 local walking = false
 local sinceCheck = math.huge -- sight checks run ~10x a second, movement every frame
 
+-- A grab in progress: the skill check the client was sent, and whether it has been settled.
+type Grab = { start: number, window: number, period: number, zones: { number }, width: number, done: boolean }
+local grabs: { [Player]: Grab } = {}
+local grabbing: Player? = nil
+
 local HEIGHT = 8.4
+local rng = Random.new()
 
 local function build(): Model
 	local m = Instance.new("Model")
@@ -67,17 +81,42 @@ local function build(): Model
 	block("Torso", Vector3.new(2.3, 2.9, 1.1), Vector3.new(0, 5.05, 0), suit, Enum.Material.Fabric)
 	block("Shirt", Vector3.new(0.7, 2.5, 0.05), Vector3.new(0, 5.2, -0.58), Color3.fromRGB(215, 215, 205))
 	block("Tie", Vector3.new(0.28, 2.1, 0.06), Vector3.new(0, 5.0, -0.62), Color3.fromRGB(130, 20, 25))
-	block("LeftArm", Vector3.new(0.6, 3.6, 0.6), Vector3.new(-1.5, 4.7, 0), suit, Enum.Material.Fabric)
-	block("RightArm", Vector3.new(0.6, 3.6, 0.6), Vector3.new(1.5, 4.7, 0), suit, Enum.Material.Fabric)
+	-- arms a little too long: they hang to his knees, pale hands with long fingers
+	block("LeftArm", Vector3.new(0.6, 4.3, 0.6), Vector3.new(-1.5, 4.35, 0), suit, Enum.Material.Fabric)
+	block("RightArm", Vector3.new(0.6, 4.3, 0.6), Vector3.new(1.5, 4.35, 0), suit, Enum.Material.Fabric)
+	for _, x in { -1.5, 1.5 } do
+		block("Hand", Vector3.new(0.45, 0.7, 0.35), Vector3.new(x, 1.85, 0), skin)
+		for f = -1, 1 do
+			block("Finger", Vector3.new(0.1, 0.75, 0.1), Vector3.new(x + f * 0.13, 1.15, -0.05), skin)
+		end
+	end
+	-- shoes, lapels and a name badge
+	for _, x in { -0.55, 0.55 } do
+		block("Shoe", Vector3.new(0.85, 0.35, 1.3), Vector3.new(x, 0.18, -0.2), Color3.fromRGB(12, 12, 12), Enum.Material.SmoothPlastic)
+	end
+	for _, x in { -0.5, 0.5 } do
+		block("Lapel", Vector3.new(0.35, 1.6, 0.06), Vector3.new(x, 5.7, -0.59), Color3.fromRGB(18, 18, 22), Enum.Material.Fabric)
+	end
+	block("Badge", Vector3.new(0.5, 0.18, 0.04), Vector3.new(0.75, 5.9, -0.6), Color3.fromRGB(200, 170, 80), Enum.Material.Metal)
 	block("Neck", Vector3.new(0.5, 0.35, 0.5), Vector3.new(0, 6.65, 0), skin)
-	block("Head", Vector3.new(1.3, 1.5, 1.3), Vector3.new(0, 7.6, 0), skin) -- no face, on purpose
+	block("Head", Vector3.new(1.3, 1.5, 1.3), Vector3.new(0, 7.6, 0), skin) -- no face, on purpose...
+	-- ...until he has you: hollow eyes and a mouth that only show during a grab
+	for _, f in {
+		{ "EyeL", Vector3.new(0.3, 0.22, 0.05), Vector3.new(-0.28, 7.8, -0.66) },
+		{ "EyeR", Vector3.new(0.3, 0.22, 0.05), Vector3.new(0.28, 7.8, -0.66) },
+		{ "Mouth", Vector3.new(0.7, 0.42, 0.05), Vector3.new(0, 7.2, -0.66) },
+	} do
+		local fp = block(f[1], f[2], f[3], Color3.new(0, 0, 0))
+		fp.Transparency = 1
+		fp:AddTag("ManagerFace")
+	end
 	m.PrimaryPart = root
 	-- he's heard before he's seen: footsteps only while he moves, and a low hum around him
 	local steps = Instance.new("Sound")
 	steps.Name = "Steps"
 	steps.SoundId = Config.Sounds.ManagerSteps
 	steps.Looped = true
-	steps.Volume = 0.9
+	steps.Volume = 1.3
 	steps.PlaybackSpeed = 0.85
 	steps.RollOffMaxDistance = C.SoundRange
 	steps.RollOffMinDistance = 4
@@ -217,7 +256,7 @@ local function catch(player: Player)
 	end
 	-- back to the back room for a moment
 	if model then
-		model:PivotTo(CFrame.new(C.Spawn))
+		model:PivotTo(CFrame.new(Layout.Map(C.Spawn)))
 		waypoints = {}
 	end
 	cooldownUntil = os.clock() + C.CooldownAfterCatch
@@ -237,10 +276,145 @@ local function catch(player: Player)
 	end)
 end
 
+local function showFace(on: boolean)
+	if model then
+		for _, d in (model :: Model):GetChildren() do
+			if d:HasTag("ManagerFace") and d:IsA("BasePart") then
+				d.Transparency = if on then 0 else 1
+			end
+		end
+	end
+end
+
+-- Settles a grab: tore free (escaped) or caught as usual.
+local function resolve(player: Player, escaped: boolean)
+	local g = grabs[player]
+	if not g or g.done then
+		return
+	end
+	g.done = true
+	grabs[player] = nil
+	if grabbing == player then
+		grabbing = nil
+	end
+	showFace(false)
+	player:SetAttribute("Grabbed", nil)
+	if not escaped then
+		catch(player)
+		return
+	end
+	-- broke free: shove apart, he staggers and waits a moment
+	player:SetAttribute("Escapes", ((player:GetAttribute("Escapes") or 0) :: number) + 1)
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if root then
+		root.Anchored = false
+		if model then
+			local away = root.Position - pivot().Position
+			away = Vector3.new(away.X, 0, away.Z)
+			if away.Magnitude > 0.01 then
+				root.AssemblyLinearVelocity = away.Unit * 45 + Vector3.new(0, 18, 0)
+				local back = pivot().Position - away.Unit * 3
+				(model :: Model):PivotTo(CFrame.lookAt(Vector3.new(back.X, 0, back.Z), Vector3.new(root.Position.X, 0, root.Position.Z)))
+			end
+		end
+	end
+	waypoints = {}
+	cooldownUntil = math.max(cooldownUntil, os.clock() + C.Grab.EscapeStun)
+	Banner:FireAllClients(string.upper(player.DisplayName) .. " BROKE FREE", "Escape")
+	if Manager.OnEscape then
+		Manager.OnEscape(player)
+	end
+end
+
+-- He's reached someone: pin them and send them the skill check.
+local function grab(player: Player)
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local m = model
+	if not root or not m or grabs[player] then
+		return
+	end
+	local G = C.Grab
+	local escapes = (player:GetAttribute("Escapes") or 0) :: number
+	local width = math.max(G.MinZone, G.Zone - G.ZoneShrink * escapes)
+	local zones = {}
+	for _ = 1, G.Hits do
+		table.insert(zones, rng:NextNumber(0.12, 0.88 - width))
+	end
+	local g: Grab = {
+		start = workspace:GetServerTimeNow() + G.Intro,
+		window = G.Window,
+		period = math.max(G.MinPeriod, G.Period - G.PeriodShrink * escapes),
+		zones = zones,
+		width = width,
+		done = false,
+	}
+	grabs[player] = g
+	grabbing = player
+	root.Anchored = true
+	root.AssemblyLinearVelocity = Vector3.zero
+	-- step in close, face to face
+	local flat = Vector3.new(root.Position.X, 0, root.Position.Z)
+	local from = pivot().Position
+	local dir = flat - from
+	dir = if dir.Magnitude > 0.01 then dir.Unit else Vector3.zAxis
+	local stand = flat - dir * 2.6
+	m:PivotTo(CFrame.lookAt(stand, flat))
+	showFace(true)
+	local steps = m.PrimaryPart and m.PrimaryPart:FindFirstChild("Steps") :: Sound?
+	if steps then
+		steps.Playing = false
+	end
+	walking = false
+	player:SetAttribute("Grabbed", true)
+	GrabRemote:FireClient(player, { Start = g.start, Window = g.window, Period = g.period, Zones = g.zones, Width = g.width })
+	task.delay(G.Intro + G.Window + 0.6, function()
+		resolve(player, false) -- ran out of time
+	end)
+end
+
+-- Where the skill-check needle is (0..1) at server time t: it sweeps back and forth.
+local function needle(g: Grab, t: number): number
+	local x = ((t - g.start) / g.period) % 2
+	return if x < 1 then x else 2 - x
+end
+
+-- The client's presses (server times). Every press has to land in the next zone, in order, inside
+-- the window; one miss and it's over.
+local function judge(player: Player, presses: any)
+	local g = grabs[player]
+	if not g or g.done or type(presses) ~= "table" or #presses > 8 then
+		return
+	end
+	local now = workspace:GetServerTimeNow()
+	local hits = 0
+	local last = g.start - 0.05
+	for _, t in presses do
+		if type(t) ~= "number" or t ~= t or t < last or t > now + 0.05 or t > g.start + g.window + 0.25 then
+			resolve(player, false)
+			return
+		end
+		last = t
+		local z = g.zones[hits + 1]
+		local x = needle(g, t)
+		if z and x >= z - 0.03 and x <= z + g.width + 0.03 then
+			hits += 1
+			if hits >= #g.zones then
+				resolve(player, true)
+				return
+			end
+		else
+			resolve(player, false)
+			return
+		end
+	end
+end
+
 local function step(dt: number)
 	local m = model
-	if not m then
-		return
+	if not m or grabbing then
+		return -- busy with someone
 	end
 	sinceCheck += dt
 	if sinceCheck >= 0.1 then
@@ -286,7 +460,7 @@ local function step(dt: number)
 	if p and root then
 		local flat = Vector3.new(root.Position.X - pos.X, 0, root.Position.Z - pos.Z).Magnitude
 		if flat < C.CatchDistance then
-			catch(p)
+			grab(p)
 		end
 	end
 end
@@ -305,8 +479,12 @@ function Manager.Start(rules: any)
 	walking = false
 	frozenUntil = 0
 	sinceCheck = math.huge
+	grabbing = nil
+	for _, p in Players:GetPlayers() do
+		p:SetAttribute("Escapes", nil)
+	end
 	local m = build()
-	m:PivotTo(CFrame.new(C.Spawn))
+	m:PivotTo(CFrame.new(Layout.Map(C.Spawn)))
 	m.Parent = store:FindFirstChild("EventProps")
 	model = m
 	waypoints = {}
@@ -316,6 +494,12 @@ end
 
 function Manager.Stop()
 	runId += 1
+	for p, g in grabs do
+		g.done = true
+		p:SetAttribute("Grabbed", nil)
+	end
+	table.clear(grabs)
+	grabbing = nil
 	if conn then
 		conn:Disconnect()
 		conn = nil
@@ -397,6 +581,7 @@ end
 
 function Manager.Init(s: Instance)
 	store = s
+	GrabResult.OnServerEvent:Connect(judge)
 	ViewReport.OnServerEvent:Connect(function(player, cf)
 		if typeof(cf) ~= "CFrame" then
 			return
@@ -417,6 +602,15 @@ function Manager.Init(s: Instance)
 	Players.PlayerRemoving:Connect(function(p)
 		views[p] = nil
 		catches[p] = nil
+		local g = grabs[p]
+		if g then
+			g.done = true
+			grabs[p] = nil
+			if grabbing == p then
+				grabbing = nil
+				showFace(false)
+			end
+		end
 	end)
 end
 

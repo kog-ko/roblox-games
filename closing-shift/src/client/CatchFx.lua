@@ -7,6 +7,7 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Caught = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Caught") :: RemoteEvent
 
 local CatchFx = {}
@@ -68,7 +69,7 @@ function CatchFx.Start()
 	msg.AnchorPoint = Vector2.new(0.5, 0.5)
 	msg.Position = UDim2.fromScale(0.5, 0.5)
 	msg.Size = UDim2.fromOffset(520, 70)
-	msg.Font = Enum.Font.Arcade
+	msg.FontFace = Fonts.Title
 	msg.TextScaled = true
 	msg.TextColor3 = Color3.fromRGB(230, 40, 35)
 	msg.TextStrokeTransparency = 0

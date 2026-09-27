@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Rules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Rules"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Cleaned = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Cleaned") :: RemoteEvent
 
 local Tutorial = {}
@@ -36,7 +37,7 @@ local function makeHint(): (Frame, TextLabel)
 	t.BackgroundTransparency = 1
 	t.Position = UDim2.fromOffset(10, 6)
 	t.Size = UDim2.new(1, -20, 1, -12)
-	t.Font = Enum.Font.Arcade
+	t.FontFace = Fonts.Body
 	t.TextScaled = true
 	t.TextColor3 = Color3.fromRGB(255, 235, 170)
 	t.Parent = box

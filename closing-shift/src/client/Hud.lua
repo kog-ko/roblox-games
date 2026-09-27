@@ -1,6 +1,6 @@
 --!strict
 -- All 2D UI: clock, spill counters, lobby/ready, coffee + gold mop buttons, results, note.
--- Chunky Arcade font, fixed pixel sizes that fit a landscape phone.
+-- Fonts from Shared.Fonts, fixed pixel sizes that fit a landscape phone.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Clock = require(Shared:WaitForChild("Clock"))
 local Progress = require(Shared:WaitForChild("Progress"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ReadyUp = Remotes:WaitForChild("ReadyUp") :: RemoteEvent
 local RequestCoffee = Remotes:WaitForChild("RequestCoffee") :: RemoteEvent
@@ -47,14 +48,14 @@ end
 local function text(parent: Instance, name: string, t: string, size: UDim2?, pos: UDim2?, color: Color3?): TextLabel
 	return new("TextLabel", {
 		Name = name, Text = t, Size = size or UDim2.fromScale(1, 1), Position = pos or UDim2.new(),
-		BackgroundTransparency = 1, Font = Enum.Font.Arcade, TextScaled = true, TextColor3 = color or INK, Parent = parent,
+		BackgroundTransparency = 1, FontFace = Fonts.Body, TextScaled = true, TextColor3 = color or INK, Parent = parent,
 	})
 end
 
 local function button(parent: Instance, name: string, t: string, size: UDim2, pos: UDim2, anchor: Vector2, color: Color3): TextButton
 	local b = new("TextButton", {
 		Name = name, Text = t, Size = size, Position = pos, AnchorPoint = anchor, AutoButtonColor = true,
-		BackgroundColor3 = color, BorderSizePixel = 0, Font = Enum.Font.Arcade, TextScaled = true,
+		BackgroundColor3 = color, BorderSizePixel = 0, FontFace = Fonts.Body, TextScaled = true,
 		TextColor3 = Color3.fromRGB(15, 15, 15), Parent = parent,
 	})
 	new("UIPadding", {
@@ -73,6 +74,7 @@ function Hud.Start()
 	local bar = new("Frame", { Name = "ShiftBar", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = gui })
 	local clockBox = box(bar, "Clock", UDim2.fromOffset(200, 50), UDim2.new(0.5, 0, 0, 8), Vector2.new(0.5, 0))
 	local clockText = text(clockBox, "Time", "2:00 AM")
+	clockText.FontFace = Fonts.Mono
 	local spillBox = box(bar, "Spills", UDim2.fromOffset(170, 38), UDim2.new(0, 12, 0, 60), Vector2.zero)
 	local spillText = text(spillBox, "Text", "SPILLS 0")
 	local mineBox = box(bar, "Mine", UDim2.fromOffset(170, 38), UDim2.new(0, 12, 0, 102), Vector2.zero)
@@ -86,7 +88,7 @@ function Hud.Start()
 
 	-- Lobby panel
 	local lobby = box(gui, "Lobby", UDim2.fromOffset(340, 250), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0))
-	text(lobby, "Title", "CLOSING SHIFT", UDim2.new(1, -20, 0, 42), UDim2.fromOffset(10, 8), RED)
+	text(lobby, "Title", "CLOSING SHIFT", UDim2.new(1, -20, 0, 42), UDim2.fromOffset(10, 8), RED).FontFace = Fonts.Title
 	local nightText = text(lobby, "Night", "NIGHT 1", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 54), Color3.fromRGB(255, 215, 90))
 	text(lobby, "Goal", "MOP EVERY SPILL BEFORE 6:00 AM", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 80))
 	local countText = text(lobby, "Countdown", "SHIFT STARTS IN 15", UDim2.new(1, -20, 0, 24), UDim2.fromOffset(10, 106))
@@ -103,10 +105,18 @@ function Hud.Start()
 
 	-- Results
 	local results = box(gui, "Results", UDim2.fromOffset(460, 420), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
-	local resTitle = text(results, "Title", "", UDim2.new(1, -20, 0, 70), UDim2.fromOffset(10, 10))
-	local resBody = text(results, "Body", "", UDim2.new(1, -30, 1, -100), UDim2.fromOffset(15, 90))
+	results.Size = UDim2.fromOffset(460, 480)
+	local resTitle = text(results, "Title", "", UDim2.new(1, -20, 0, 60), UDim2.fromOffset(10, 10))
+	resTitle.FontFace = Fonts.Title
+	local resBody = text(results, "Body", "", UDim2.new(1, -30, 1, -170), UDim2.fromOffset(15, 76))
+	resBody.FontFace = Fonts.Mono
 	resBody.TextXAlignment = Enum.TextXAlignment.Left
 	resBody.TextYAlignment = Enum.TextYAlignment.Top
+	-- after a shift nothing starts by itself: play on, or go back to the lobby
+	local nextBtn = button(results, "NextShift", "NEXT SHIFT", UDim2.fromOffset(200, 48), UDim2.new(0.5, -6, 1, -40), Vector2.new(1, 1), Color3.fromRGB(120, 190, 110))
+	local homeBtn = button(results, "Home", "BACK TO LOBBY", UDim2.fromOffset(200, 48), UDim2.new(0.5, 6, 1, -40), Vector2.new(0, 1), Color3.fromRGB(150, 150, 140))
+	nextBtn.Modal = true -- frees the mouse from first person while the results are up
+	local returnText = text(results, "Return", "", UDim2.new(1, -20, 0, 20), UDim2.new(0, 10, 1, -30), Color3.fromRGB(170, 175, 160))
 
 	-- Toast + note
 	local toast = text(gui, "Toast", "", UDim2.fromOffset(460, 30), UDim2.new(0.5, 0, 1, -140), Color3.fromRGB(200, 210, 190))
@@ -117,6 +127,7 @@ function Hud.Start()
 		BackgroundColor3 = Color3.fromRGB(235, 228, 195), BorderSizePixel = 0, Rotation = -3, Visible = false, Parent = gui,
 	})
 	local noteText = text(note, "Text", "", UDim2.new(1, -30, 1, -30), UDim2.fromOffset(15, 15), Color3.fromRGB(35, 35, 70))
+	noteText.FontFace = Fonts.Title
 	local noteClose = new("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = note })
 
 	local toastId = 0
@@ -156,16 +167,21 @@ function Hud.Start()
 
 	local function refreshPhase()
 		local phase = ReplicatedStorage:GetAttribute("Phase")
-		lobby.Visible = phase == "Lobby"
+		local betweenShifts = phase == "Lobby" and ReplicatedStorage:GetAttribute("CountdownMode") == "Return" and resTitle.Text ~= ""
+		lobby.Visible = phase == "Lobby" and not betweenShifts
 		inviteBtn.Visible = phase == "Lobby"
-		leaveBtn.Visible = inShiftPlace and (phase == "Lobby" or phase == "Results")
+		leaveBtn.Visible = inShiftPlace and phase == "Lobby" and not betweenShifts
 		bar.Visible = phase == "Shift" or phase == "Payoff" or phase == "LightsOut"
+		homeBtn.Visible = inShiftPlace
+		nextBtn.Position = if inShiftPlace then UDim2.new(0.5, -6, 1, -40) else UDim2.new(0.5, 100, 1, -40)
 		if phase == "Lobby" then
-			results.Visible = false
+			results.Visible = betweenShifts
 			note.Visible = false
 			readyBtn.Text = "READY"
 		elseif phase == "Shift" then
 			results.Visible = false
+			resTitle.Text = ""
+			nextBtn.Text = "NEXT SHIFT"
 			showToast("MOP EVERY SPILL BEFORE 6:00 AM", 4)
 		end
 		refreshCounts()
@@ -181,14 +197,18 @@ function Hud.Start()
 	refreshNight()
 
 	ReplicatedStorage:GetAttributeChangedSignal("Phase"):Connect(refreshPhase)
+	ReplicatedStorage:GetAttributeChangedSignal("CountdownMode"):Connect(refreshPhase)
 	ReplicatedStorage:GetAttributeChangedSignal("SpillsRemaining"):Connect(refreshCounts)
 	player.AttributeChanged:Connect(refreshCounts)
 	refreshPhase()
 
 	RunService.Heartbeat:Connect(function()
 		local phase = ReplicatedStorage:GetAttribute("Phase")
-		if phase == "Lobby" then
-			countText.Text = "SHIFT STARTS IN " .. tostring(ReplicatedStorage:GetAttribute("Countdown") or 0)
+		if phase == "Lobby" or phase == "Results" then
+			local n = tostring(ReplicatedStorage:GetAttribute("Countdown") or 0)
+			local returning = ReplicatedStorage:GetAttribute("CountdownMode") == "Return"
+			countText.Text = if returning then "PRESS READY TO START" else "SHIFT STARTS IN " .. n
+			returnText.Text = if phase == "Lobby" and returning and inShiftPlace then "BACK TO THE LOBBY IN " .. n .. "s" else ""
 		elseif phase == "Shift" then
 			local start = (ReplicatedStorage:GetAttribute("ShiftStart") or 0) :: number
 			local elapsed = workspace:GetServerTimeNow() - start
@@ -216,6 +236,17 @@ function Hud.Start()
 		ReadyUp:FireServer()
 		readyBtn.Text = "READY!"
 	end)
+	nextBtn.Activated:Connect(function()
+		ReadyUp:FireServer()
+		nextBtn.Text = "STARTING..."
+	end)
+	homeBtn.Activated:Connect(function()
+		homeBtn.Text = "LEAVING..."
+		ReturnToLobby:FireServer()
+		task.delay(6, function()
+			homeBtn.Text = "BACK TO LOBBY"
+		end)
+	end)
 	coffeeBtn.Activated:Connect(function()
 		RequestCoffee:FireServer()
 	end)
@@ -241,6 +272,7 @@ function Hud.Start()
 	-- Server messages
 	ResultsRemote.OnClientEvent:Connect(function(r: any)
 		results.Visible = true
+		nextBtn.Text = "NEXT SHIFT"
 		local scale = results:FindFirstChildOfClass("UIScale") or new("UIScale", { Parent = results })
 		scale.Scale = 0.6
 		TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()

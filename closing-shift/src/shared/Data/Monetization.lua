@@ -69,10 +69,10 @@ local Monetization = {
 		SpillStorm = { Name = "SPILL STORM", Description = "5 more spills for everyone" },
 		ManagerDayOff = { Name = "MANAGER DAY OFF", Description = "No Manager for the rest of the night" },
 		ExtraCoffee = { Name = "EXTRA COFFEE", Description = "30s speed boost" },
-		PaycheckSmall = { Name = "SMALL PAYCHECK", Description = "$500" },
-		PaycheckMedium = { Name = "MEDIUM PAYCHECK", Description = "$2,000" },
-		PaycheckLarge = { Name = "LARGE PAYCHECK", Description = "$6,000" },
-		StarterPack = { Name = "STARTER PACK", Description = "$1,500 + 2x paycheck for 24 hours" },
+		PaycheckSmall = { Name = "SMALL PAYCHECK", Description = "Get $500 cash" },
+		PaycheckMedium = { Name = "MEDIUM PAYCHECK", Description = "Get $2,000 cash" },
+		PaycheckLarge = { Name = "LARGE PAYCHECK", Description = "Get $6,000 cash" },
+		StarterPack = { Name = "STARTER PACK", Description = "Get $1,500 cash + 2x paycheck for 24 hours" },
 	},
 }
 

@@ -1,11 +1,13 @@
 --!strict
--- PSX camera feel: fixed FOV, head-bob while walking (stronger sprinting) and rotation snapped
--- to small steps for a low-framerate look.
+-- PSX bodycam feel: a wide fixed FOV, head-bob while walking (stronger sprinting), roll into
+-- strafes and turns, and rotation snapped to small steps for a low-framerate look. The mouse
+-- cursor is hidden whenever the mouse is locked to the centre (first person with no menu open).
 -- The camera module reads Camera.CFrame back each frame to apply mouse input, so the untouched
 -- CFrame is saved after our edits and restored right before the camera module runs again.
 -- Otherwise small mouse movements would be rounded away by the snapping.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Movement = require(script.Parent:WaitForChild("Movement"))
@@ -14,6 +16,13 @@ local CameraFx = {}
 local player = Players.LocalPlayer :: Player
 local PSX = Config.PSX
 local kick = 0 -- degrees of downward nod, decays quickly
+
+local shake = 0 -- degrees of constant jitter (the Manager close by), set every frame by Tension
+local shakeRng = Random.new()
+
+function CameraFx.SetShake(degrees: number)
+	shake = degrees
+end
 
 -- A small camera nod, e.g. when a clean lands.
 function CameraFx.Kick(degrees: number)
@@ -28,6 +37,16 @@ function CameraFx.Start()
 	local trueCF: CFrame? = nil
 	local bobT = 0
 	local bobAmt = 0
+	local roll = 0
+	local lastYaw: number? = nil
+
+	-- no cursor in first person; menus (Modal buttons) unlock the mouse and bring it back
+	RunService.RenderStepped:Connect(function()
+		local locked = UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+		if UserInputService.MouseIconEnabled == locked then
+			UserInputService.MouseIconEnabled = not locked
+		end
+	end)
 
 	RunService:BindToRenderStep("PsxCameraRestore", Enum.RenderPriority.Camera.Value - 1, function()
 		local camera = workspace.CurrentCamera
@@ -45,6 +64,7 @@ function CameraFx.Start()
 		camera.FieldOfView = PSX.FieldOfView
 		local cf = camera.CFrame
 		trueCF = cf
+		local view = cf
 
 		if PSX.CameraSnap then
 			local rx, ry, rz = cf:ToOrientation()
@@ -64,6 +84,31 @@ function CameraFx.Start()
 				local y = -math.abs(math.cos(bobT)) * bobAmt
 				cf = cf * CFrame.new(x, y, 0) * CFrame.Angles(0, 0, math.sin(bobT) * bobAmt * 0.06)
 			end
+		end
+
+		if PSX.Tilt then
+			local char = player.Character
+			local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local _, yaw = view:ToOrientation()
+			local turn = 0
+			if lastYaw and dt > 0 then
+				local d = yaw - lastYaw
+				d = (d + math.pi) % (2 * math.pi) - math.pi
+				turn = math.deg(d) / dt
+			end
+			lastYaw = yaw
+			local side = 0
+			if root then
+				local v = root.AssemblyLinearVelocity
+				side = view.RightVector:Dot(Vector3.new(v.X, 0, v.Z)) / math.max(Config.WalkSpeed, 1)
+			end
+			local target = math.clamp(-side * PSX.TiltStrafe - turn * PSX.TiltTurn, -PSX.TiltMax, PSX.TiltMax)
+			roll += (target - roll) * math.min(1, dt * 6)
+			cf = cf * CFrame.Angles(0, 0, math.rad(roll))
+		end
+
+		if shake > 0.01 then
+			cf = cf * CFrame.Angles(math.rad(shakeRng:NextNumber(-shake, shake)), math.rad(shakeRng:NextNumber(-shake, shake)), 0)
 		end
 
 		if kick > 0.01 then

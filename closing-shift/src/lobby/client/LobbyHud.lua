@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Progress = require(Shared:WaitForChild("Progress"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 
 local LobbyHud = {}
 local player = Players.LocalPlayer :: Player
@@ -37,7 +38,7 @@ end
 
 local function text(parent: Instance, name: string, t: string, size: UDim2, pos: UDim2, color: Color3?): TextLabel
 	return new("TextLabel", {
-		Name = name, Text = t, Size = size, Position = pos, BackgroundTransparency = 1, Font = Enum.Font.Arcade,
+		Name = name, Text = t, Size = size, Position = pos, BackgroundTransparency = 1, FontFace = Fonts.Body,
 		TextScaled = true, TextColor3 = color or INK, Parent = parent,
 	})
 end
@@ -45,22 +46,23 @@ end
 local function button(parent: Instance, name: string, t: string, size: UDim2, pos: UDim2, anchor: Vector2, color: Color3): TextButton
 	local b = new("TextButton", {
 		Name = name, Text = t, Size = size, Position = pos, AnchorPoint = anchor, BackgroundColor3 = color, BorderSizePixel = 0,
-		Font = Enum.Font.Arcade, TextScaled = true, TextColor3 = Color3.fromRGB(15, 15, 15), AutoButtonColor = true, Parent = parent,
+		FontFace = Fonts.Body, TextScaled = true, TextColor3 = Color3.fromRGB(15, 15, 15), AutoButtonColor = true, Parent = parent,
 	})
 	new("UIPadding", { PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), Parent = b })
 	return b
 end
 
-export type Actions = { Shop: () -> (), Style: () -> (), Party: () -> (), Jobs: () -> () }
+export type Actions = { Shop: () -> (), Style: () -> (), Party: () -> (), Jobs: () -> (), Awards: () -> () }
 
 function LobbyHud.Start(actions: Actions)
 	local gui = new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, IgnoreGuiInset = false, Parent = player:WaitForChild("PlayerGui") })
 
 	-- you: cash, rank, this week
-	local me = box(gui, "Me", UDim2.fromOffset(260, 84), UDim2.new(0, 12, 0, 8), Vector2.new(0, 0))
+	local me = box(gui, "Me", UDim2.fromOffset(260, 104), UDim2.new(0, 12, 0, 8), Vector2.new(0, 0))
 	local cash = text(me, "Cash", "$0", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 4), GOLD)
 	local rank = text(me, "Rank", "TRAINEE", UDim2.new(1, -16, 0, 20), UDim2.fromOffset(8, 36))
 	local week = text(me, "Week", "", UDim2.new(1, -16, 0, 18), UDim2.fromOffset(8, 60), Color3.fromRGB(170, 190, 170))
+	local streak = text(me, "Streak", "", UDim2.new(1, -16, 0, 18), UDim2.fromOffset(8, 80), Color3.fromRGB(255, 160, 70))
 
 	-- buttons: a 2x2 grid under the panel (clear of the phone joystick), then INVITE
 	local grid = {
@@ -68,13 +70,14 @@ function LobbyHud.Start(actions: Actions)
 		{ "Style", "STYLE", Color3.fromRGB(230, 160, 230), actions.Style },
 		{ "Party", "PARTY", Color3.fromRGB(110, 160, 220), actions.Party },
 		{ "Jobs", "JOBS", Color3.fromRGB(150, 210, 140), actions.Jobs },
+		{ "Awards", "AWARDS", Color3.fromRGB(255, 160, 70), actions.Awards },
 	}
 	for i, b in grid do
 		local col, row = (i - 1) % 2, (i - 1) // 2
-		local btn = button(gui, b[1], b[2], UDim2.fromOffset(126, 38), UDim2.fromOffset(12 + col * 134, 100 + row * 44), Vector2.new(0, 0), b[3])
+		local btn = button(gui, b[1], b[2], UDim2.fromOffset(126, 38), UDim2.fromOffset(12 + col * 134, 120 + row * 44), Vector2.new(0, 0), b[3])
 		btn.Activated:Connect(b[4])
 	end
-	local inviteBtn = button(gui, "Invite", "INVITE FRIENDS: +10% PAY", UDim2.fromOffset(260, 34), UDim2.fromOffset(12, 190), Vector2.new(0, 0), Color3.fromRGB(110, 160, 220))
+	local inviteBtn = button(gui, "Invite", "INVITE FRIENDS: +10% PAY", UDim2.fromOffset(126, 38), UDim2.fromOffset(146, 208), Vector2.new(0, 0), Color3.fromRGB(110, 160, 220))
 
 	-- queue panel (only while on a pad)
 	local q = box(gui, "Queue", UDim2.fromOffset(360, 74), UDim2.new(0.5, 0, 1, -16), Vector2.new(0.5, 1))
@@ -95,6 +98,8 @@ function LobbyHud.Start(actions: Actions)
 		local friends = (player:GetAttribute("CrewFriends") or 0) :: number
 		week.Text = string.format("THIS WEEK: %d SPILLS%s", (player:GetAttribute("WeeklyCleaned") or 0) :: number,
 			if friends > 0 then string.format("   CREW +%d%%", math.floor(friends * Config.Pay.CrewBonusPerFriend * 100 + 0.5)) else "")
+		local days = (player:GetAttribute("DailyStreak") or 0) :: number
+		streak.Text = if days > 0 then string.format("CLOCK-IN STREAK: %d DAY%s", days, if days == 1 then "" else "S") else "CLOCK IN AT THE TIME CLOCK"
 		local pad = player:GetAttribute("QueuePad")
 		local wasVisible = q.Visible
 		q.Visible = pad ~= nil

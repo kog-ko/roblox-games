@@ -2,6 +2,9 @@
   "name": "ClosingShift",
   "tree": {
     "$className": "DataModel",
+    "ReplicatedFirst": {
+      "First": { "$path": "src/first" }
+    },
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
@@ -22,6 +25,8 @@
         "Banner": { "$className": "RemoteEvent" },
         "Offer": { "$className": "RemoteEvent" },
         "ReturnToLobby": { "$className": "RemoteEvent" },
+        "Grab": { "$className": "RemoteEvent" },
+        "GrabResult": { "$className": "RemoteEvent" },
         "ViewReport": { "$className": "UnreliableRemoteEvent" }
       }
     },

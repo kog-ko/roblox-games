@@ -11,7 +11,7 @@ if not remotes then
 	remotes.Parent = ReplicatedStorage
 end
 -- the shared client modules (Shop, Offers, Locker) wait for these
-for _, name in { "RequestPurchase", "RequestCoffee", "BuyUpgrade", "Banner", "Offer", "Caught" } do
+for _, name in { "RequestPurchase", "RequestCoffee", "BuyUpgrade", "Banner", "Offer", "Caught", "ObbySfx" } do
 	if not (remotes :: Instance):FindFirstChild(name) then
 		local r = Instance.new("RemoteEvent")
 		r.Name = name
@@ -37,6 +37,7 @@ local Leaderboard = require(script.Leaderboard)
 local NameTags = require(script.NameTags)
 local Cosmetics = require(script.Cosmetics)
 local Jobs = require(script.Jobs)
+local Achievements = require(script.Achievements)
 local Queue = require(script.Queue)
 local LobbyBoards = require(script.LobbyBoards)
 local Party = require(script.Party)
@@ -52,6 +53,8 @@ Monetization.OnPurchased = function(player, key)
 	Analytics.Event(player, "PromptBought", 1, key)
 end
 DataService.Init()
+Achievements.Init()
+Economy.OnStreak = Achievements.Check
 Economy.Init(l)
 Monetization.Init(l)
 Leaderboard.Init(l) -- trophies and weekly counts (the lobby's boards are LobbyBoards)

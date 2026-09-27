@@ -15,6 +15,7 @@ local DataService = require(script.Parent.DataService)
 local Economy = require(script.Parent.Economy)
 local Cosmetics = require(script.Parent.Cosmetics)
 local Jobs = require(script.Parent.Jobs)
+local Achievements = require(script.Parent.Achievements)
 
 local Obby = {}
 
@@ -24,6 +25,7 @@ local starts: { [string]: CFrame } = {}
 local lastTouch: { [Player]: number } = {}
 local lastKill: { [Player]: number } = {}
 local Banner: RemoteEvent
+local Sfx: RemoteEvent -- the player's own obby sounds (LobbySound)
 
 local function playerFrom(hit: BasePart): (Player?, BasePart?)
 	local char = hit.Parent
@@ -76,6 +78,7 @@ local function reward(p: Player, name: string, seconds: number)
 		Cosmetics.Apply(p)
 		Banner:FireClient(p, "ALL OBBIES CLEARED: PARKOUR TRAIL UNLOCKED (STYLE)", "Obby")
 	end
+	Achievements.Check(p)
 	task.spawn(DataService.Save, p)
 end
 
@@ -138,7 +141,12 @@ end
 
 function Obby.Init()
 	Banner = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Banner") :: RemoteEvent
+	Sfx = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ObbySfx") :: RemoteEvent
 	hook("ObbyStart", function(p, _, part, name)
+		local was = runs[p]
+		if not (was and was.obby == name and os.clock() - was.started < 1) then
+			Sfx:FireClient(p, "Start")
+		end
 		runs[p] = { obby = name, started = os.clock(), checkpoint = above(part) }
 		p:SetAttribute("ObbyRun", name)
 		p:SetAttribute("ObbyStart", workspace:GetServerTimeNow())
@@ -146,8 +154,11 @@ function Obby.Init()
 	hook("ObbyCheckpoint", function(p, _, part, name)
 		local run = runs[p]
 		if run and run.obby == name then
-			run.checkpoint = above(part)
-		end
+			local cp = above(part)
+			if cp ~= run.checkpoint then
+				Sfx:FireClient(p, "Checkpoint")
+			end
+			run.checkpoint = cp
 	end)
 	hook("ObbyKill", function(p, root, part, name)
 		-- a short grace after each respawn, and only when really at the hazard (a moved character
@@ -165,6 +176,7 @@ function Obby.Init()
 		local run = runs[p]
 		local target = if run and run.obby == name then run.checkpoint else starts[name]
 		if target then
+			Sfx:FireClient(p, "Fall")
 			root.AssemblyLinearVelocity = Vector3.zero
 			p.Character:PivotTo(target)
 		end
@@ -176,6 +188,7 @@ function Obby.Init()
 		end
 		local seconds = os.clock() - run.started
 		stop(p)
+		Sfx:FireClient(p, "Finish")
 		reward(p, name, seconds)
 	end)
 	animate()

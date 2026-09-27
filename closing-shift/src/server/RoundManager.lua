@@ -2,6 +2,7 @@
 -- Lobby -> Shift (2:00 AM to 6:00 AM) -> Payoff or Lights out -> Results -> Lobby.
 -- Round state is published as ReplicatedStorage attributes so the client can just read it.
 local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.Rules)
@@ -18,6 +19,8 @@ local ServerBoosts = require(script.Parent.ServerBoosts)
 local Analytics = require(script.Parent.Analytics)
 local Jobs = require(script.Parent.Jobs)
 local Zones = require(script.Parent.Zones)
+local Achievements = require(script.Parent.Achievements)
+local LateCustomer = require(script.Parent.LateCustomer)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
@@ -44,6 +47,7 @@ local assisted = false
 local fromQueue = game.PrivateServerId ~= "" and game.PrivateServerOwnerId == 0
 local expectedCrew = 0
 local firstLobby = true
+local shiftsPlayed = 0 -- after the first shift, the next one waits for READY (or everyone goes back)
 local night = Config.DefaultNight -- which night the next shift plays (the shift board sets this)
 local modifiers: { string } = {}
 
@@ -125,7 +129,6 @@ local function runLobby()
 			pcall(p.LoadCharacter, p) -- fresh spawn behind the counter
 		end)
 	end
-	readyRequested = false
 	local intermission = Config.IntermissionTime
 	if fromQueue and firstLobby then
 		firstLobby = false
@@ -151,17 +154,38 @@ local function runLobby()
 		night = groupUnlocked()
 	end
 	publishNight()
+	-- Between shifts nothing starts on its own: someone presses NEXT SHIFT, or when nobody does the
+	-- crew goes back to the lobby (a Studio playtest has no lobby, so it just starts).
+	local waitForReady = shiftsPlayed > 0
+	if waitForReady then
+		intermission = Config.PostShiftWait
+	end
+	ReplicatedStorage:SetAttribute("CountdownMode", if waitForReady then "Return" else "Start")
 	local deadline = os.clock() + intermission
 	while true do
 		if #Players:GetPlayers() == 0 then
 			deadline = os.clock() + intermission
-		elseif readyRequested or os.clock() >= deadline then
+		elseif readyRequested then
 			break
+		elseif os.clock() >= deadline then
+			if waitForReady and game.PlaceId == Config.Places.Shift then
+				local players = Players:GetPlayers()
+				ReplicatedStorage:SetAttribute("Countdown", 0)
+				local ok, err = pcall(TeleportService.TeleportAsync, TeleportService, Config.Places.Lobby, players)
+				if not ok then
+					warn("[Round] return to lobby failed:", err)
+				end
+				deadline = os.clock() + intermission -- anyone left (a failed teleport) gets another round of waiting
+			else
+				break
+			end
 		end
 		ReplicatedStorage:SetAttribute("Countdown", math.ceil(deadline - os.clock()))
 		task.wait(0.1)
 	end
 	ReplicatedStorage:SetAttribute("Countdown", 0)
+	ReplicatedStorage:SetAttribute("CountdownMode", "Start")
+	shiftsPlayed += 1
 end
 
 local shiftLoop: (Rules.Rules, number) -> number?
@@ -207,6 +231,7 @@ function shiftLoop(rules: Rules.Rules, start: number): number?
 	if not ServerBoosts.IsDayOff() then
 		Manager.Start(rules)
 	end
+	LateCustomer.Start(rules)
 	ServerBoosts.OnShiftStart()
 
 	while not won and not skipTimer and now() < start + rules.ShiftLength - penalty do
@@ -217,6 +242,7 @@ function shiftLoop(rules: Rules.Rules, start: number): number?
 	end
 	EventDirector.Stop()
 	Manager.Stop()
+	LateCustomer.Stop()
 	SpillService.Stop()
 
 	if won then
@@ -232,6 +258,7 @@ function shiftLoop(rules: Rules.Rules, start: number): number?
 end
 
 local function runResults(rules: Rules.Rules, cleanTime: number?)
+	readyRequested = false -- NEXT SHIFT on the results screen counts from here
 	local teamCleaned = 0
 	local crew = {}
 	for _, p in Players:GetPlayers() do
@@ -301,6 +328,28 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 				Jobs.Record(p, "fast", 1)
 			end
 		end
+		-- achievement stats for this night
+		DataService.Update(p, function(prof)
+			local stats = prof.Stats :: any
+			local function add(k: string)
+				stats[k] = ((stats[k] or 0) :: number) + 1
+			end
+			if ((p:GetAttribute("CrewFriends") or 0) :: number) > 0 then
+				add("CrewShifts")
+			end
+			if mvp == p.UserId then
+				add("Mvps")
+			end
+			if cleanTime then
+				if rules.Manager.Enabled and not p:GetAttribute("CaughtThisShift") then
+					add("NoCatchWins")
+				end
+				if cleanTime < rules.ShiftLength * Config.Pay.FastFraction then
+					add("FastShifts")
+				end
+			end
+		end)
+		Achievements.Check(p)
 		if RoundManager.OnShiftResult then
 			task.spawn(RoundManager.OnShiftResult, p, cleanTime ~= nil)
 		end
@@ -443,6 +492,12 @@ function RoundManager.Init(s: Instance)
 			Analytics.Event(player, "OfferShown", 1, "SecondChance", night)
 		end
 	end
+	Manager.OnEscape = function(player: Player)
+		Achievements.Add(player, "Escapes")
+	end
+	SpillService.OnBigCleaned = function(player: Player)
+		Achievements.Add(player, "BigSpills")
+	end
 	Manager.OnUndoCatch = function(player: Player)
 		assisted = true -- Second Chance was bought
 		player:SetAttribute("CaughtThisShift", false)
@@ -455,7 +510,8 @@ function RoundManager.Init(s: Instance)
 		end
 	end
 	ReadyRemote.OnServerEvent:Connect(function()
-		if ReplicatedStorage:GetAttribute("Phase") == "Lobby" then
+		local phase = ReplicatedStorage:GetAttribute("Phase")
+		if phase == "Lobby" or phase == "Results" then
 			readyRequested = true
 		end
 	end)

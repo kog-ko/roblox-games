@@ -1,5 +1,7 @@
 --!strict
 -- The lights die for a moment; when they come back there's a spill behind whoever is nearest the back room.
+local Layout = require(game:GetService("ReplicatedStorage").Shared.Layout)
+
 return function(ctx)
 	local release = ctx.cutPower()
 	task.wait(ctx.tuning.Duration or 2)
@@ -14,7 +16,8 @@ return function(ctx)
 	if best and ctx.isCurrent() and not ctx.spills.IsFinalPhase() then
 		local look = Vector3.new(best.CFrame.LookVector.X, 0, best.CFrame.LookVector.Z)
 		look = if look.Magnitude > 0.01 then look.Unit else Vector3.zAxis
-		local pos = best.Position - look * (ctx.tuning.BehindPlayerDistance or 6)
+		-- worked out in the builder's coordinates (Shared/Layout), then mapped back into the store
+		local pos = Layout.Unmap(best.Position - look * (ctx.tuning.BehindPlayerDistance or 6))
 		if pos.X > 30.5 then -- in the back room
 			pos = Vector3.new(math.clamp(pos.X, 32, 46), 0, math.clamp(pos.Z, -19, -5))
 		elseif pos.X < -30.5 then -- in the restroom hallway
@@ -22,7 +25,7 @@ return function(ctx)
 		else
 			pos = Vector3.new(math.clamp(pos.X, -28, 29), 0, math.clamp(pos.Z, -15, 18))
 		end
-		ctx.spills.Spawn(pos)
+		ctx.spills.Spawn(Layout.Map(pos))
 	end
 	release()
 end

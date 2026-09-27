@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 local SoundFx = require(script.Parent:WaitForChild("SoundFx"))
 local Viewmodel = require(script.Parent:WaitForChild("Viewmodel"))
 local CameraFx = require(script.Parent:WaitForChild("CameraFx"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Cleaned = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Cleaned") :: RemoteEvent
 
 local Juice = {}
@@ -98,7 +99,7 @@ local function burst(pos: Vector3, color: Color3, big: boolean)
 	local t = Instance.new("TextLabel")
 	t.BackgroundTransparency = 1
 	t.Size = UDim2.fromScale(1, 1)
-	t.Font = Enum.Font.Arcade
+	t.FontFace = Fonts.Bold
 	t.TextScaled = true
 	t.Text = if big then "CLEAN!" else "+1"
 	t.TextColor3 = Color3.fromRGB(235, 255, 200)

@@ -3,11 +3,15 @@
 -- HUD (lobby only). Every buy button just asks the server (RequestPurchase); the server decides
 -- whether it's allowed right now and shows the Roblox prompt.
 -- Products whose ID is 0 are hidden, except in Studio where they show as "ID NOT SET".
+-- Everything here costs Robux, so each BUY button shows its Robux price (read from Roblox, so it's
+-- always the real one); cash amounts in the descriptions are what you get, not what you pay.
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local RequestPurchase = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestPurchase") :: RemoteEvent
 
 local Shop = {}
@@ -35,12 +39,33 @@ local function idOf(key: string): number
 	return MON.GamePasses[key] or MON.Products[key] or 0
 end
 
+-- Robux prices, fetched once per item in the background.
+local prices: { [string]: number } = {}
+local asked: { [string]: boolean } = {}
+local function priceOf(key: string): number?
+	if prices[key] or asked[key] then
+		return prices[key]
+	end
+	asked[key] = true
+	local id = idOf(key)
+	if id ~= 0 then
+		task.spawn(function()
+			local kind = if MON.GamePasses[key] then Enum.InfoType.GamePass else Enum.InfoType.Product
+			local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, id, kind)
+			if ok and type(info) == "table" and type(info.PriceInRobux) == "number" then
+				prices[key] = info.PriceInRobux
+			end
+		end)
+	end
+	return nil
+end
+
 local function label(parent: Instance, t: string, size: UDim2, pos: UDim2, color: Color3?, align: Enum.TextXAlignment?): TextLabel
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Size = size
 	l.Position = pos
-	l.Font = Enum.Font.Arcade
+	l.FontFace = Fonts.Body
 	l.TextScaled = true
 	l.TextColor3 = color or INK
 	l.TextXAlignment = align or Enum.TextXAlignment.Left
@@ -56,7 +81,7 @@ local function button(parent: Instance, name: string, t: string, size: UDim2, po
 	b.Position = pos
 	b.BackgroundColor3 = color
 	b.BorderSizePixel = 0
-	b.Font = Enum.Font.Arcade
+	b.FontFace = Fonts.Body
 	b.TextScaled = true
 	b.TextColor3 = Color3.fromRGB(15, 15, 15)
 	b.Text = t
@@ -220,7 +245,8 @@ function Shop.Start()
 			end
 			r.frame.Visible = show
 			local enabled = id ~= 0
-			local text = "BUY"
+			local robux = priceOf(r.key)
+			local text = if robux then "R$ " .. robux else "BUY"
 			if id == 0 then
 				text = "ID NOT SET"
 			elseif PASS[r.key] and player:GetAttribute(r.key) then
@@ -232,7 +258,7 @@ function Shop.Start()
 			end
 			if r.key == "StarterPack" and type(starterUntil) == "number" then
 				local left = starterUntil - os.time()
-				r.note.Text = string.format("$1,500 + 2X PAYCHECK 24H  (OFFER ENDS IN %dH %02dM)", left // 3600, (left % 3600) // 60)
+				r.note.Text = string.format("GET $1,500 CASH + 2X PAYCHECK 24H  (OFFER ENDS IN %dH %02dM)", left // 3600, (left % 3600) // 60)
 			end
 			r.buy.Text = text
 			r.buy.AutoButtonColor = enabled

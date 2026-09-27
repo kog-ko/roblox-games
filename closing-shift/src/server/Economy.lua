@@ -101,7 +101,9 @@ function Economy.ApplyUpgrades(player: Player)
 	end
 end
 
--- Daily Shift Bonus: first shift of the (UTC) day. Returns the bonus paid (0 if already claimed).
+-- Daily Shift Bonus: first shift of the (UTC) day. Returns the bonus paid (0 if already claimed).-- Called after a daily clock-in (Achievements checks the streak ones).
+Economy.OnStreak = nil :: ((Player) -> ())?
+
 function Economy.ClaimDaily(player: Player): (number, number)
 	local p = DataService.Get(player)
 	if not p then
@@ -111,13 +113,39 @@ function Economy.ClaimDaily(player: Player): (number, number)
 	if p.Daily.LastDay == today then
 		return 0, p.Daily.Streak
 	end
-	local streak = if p.Daily.LastDay == today - 1 then math.min(p.Daily.Streak + 1, Config.Daily.MaxStreak) else 1
+	-- the streak keeps counting; the daily bonus stops growing at MaxStreak days
+	local streak = if p.Daily.LastDay == today - 1 then p.Daily.Streak + 1 else 1
+	local milestone = nil
+	for _, m in Config.Achievements.Streaks do
+		if m.Days == streak then
+			milestone = m
+		end
+	end
 	DataService.Update(player, function(prof)
 		prof.Daily.LastDay = today
 		prof.Daily.Streak = streak
+		local stats = prof.Stats :: any
+		stats.BestStreak = math.max((stats.BestStreak or 0) :: number, streak)
+		if milestone and milestone.Cosmetic then
+			prof.Cosmetics.Owned[milestone.Cosmetic] = true
+		end
 	end)
-	local bonus = streak * Config.Daily.PerStreakDay
+	player:SetAttribute("DailyStreak", streak)
+	local bonus = math.min(streak, Config.Daily.MaxStreak) * Config.Daily.PerStreakDay
+	if milestone then
+		bonus += milestone.Reward
+		local banner = game:GetService("ReplicatedStorage").Remotes:FindFirstChild("Banner") :: RemoteEvent?
+		if banner then
+			task.delay(3, function()
+				banner:FireClient(player, string.format("%d-DAY STREAK!  +$%d%s", streak, milestone.Reward,
+					if milestone.Cosmetic then "  + A NEW LOOK IN THE WARDROBE" else ""), "Streak")
+			end)
+		end
+	end
 	Economy.AddCash(player, bonus, "DailyBonus")
+	if Economy.OnStreak then
+		Economy.OnStreak(player)
+	end
 	return bonus, streak
 end
 

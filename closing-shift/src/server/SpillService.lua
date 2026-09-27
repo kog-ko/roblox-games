@@ -20,12 +20,14 @@ type Spill = {
 	Done: boolean,
 	Bonus: boolean?, -- added by a paid Spill Storm: pays, but doesn't count toward rankings
 	Stages: number?, -- big spills take 2 cleans (two players can each do one at the same time)
+	Big: boolean?,
 }
 
 local SpillService = {}
 -- Hooks set by RoundManager. OnCleaned's third argument is false for cleans that mustn't count
 -- toward rankings (Spill Storm spills, spills the paid janitor cleaned).
 SpillService.OnCleaned = nil :: ((Player, boolean, boolean) -> ())?
+SpillService.OnBigCleaned = nil :: ((Player) -> ())? -- the last clean of a big spill
 SpillService.OnFinalSpawned = nil :: (() -> ())?
 
 local COLORS = {
@@ -157,6 +159,9 @@ local function finish(spill: Spill, player: Player, assisted: boolean?)
 	end
 	spill.Done = true
 	spill.Prompt.Enabled = false
+	if spill.Big and SpillService.OnBigCleaned then
+		task.spawn(SpillService.OnBigCleaned, player)
+	end
 	for p in spill.Squeaks do
 		stopSqueak(spill, p)
 	end
@@ -309,6 +314,7 @@ function SpillService.Spawn(pos: Vector3, isFinal: boolean?, big: boolean?)
 	local spill = makeSpill(parts, pos, isFinal == true)
 	if big and not isFinal then
 		spill.Stages = 2
+		spill.Big = true
 		spill.Prompt.ObjectText = "BIG SPILL (2 CLEANS)"
 	end
 	return spill

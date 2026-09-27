@@ -14,6 +14,8 @@
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
+local Layout = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Layout"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 
 local StoreBuilder = {}
 
@@ -75,7 +77,7 @@ local function label(parent: Instance, text: string, props: { [string]: any }?):
 	local t = Instance.new("TextLabel")
 	t.BackgroundTransparency = 1
 	t.Size = UDim2.fromScale(1, 1)
-	t.Font = Enum.Font.Arcade
+	t.FontFace = Fonts.Sign
 	t.TextScaled = true
 	t.Text = text
 	t.TextColor3 = Color3.fromRGB(20, 20, 20)
@@ -494,7 +496,9 @@ local function buildProps(store: Instance)
 	for i, v in { Vector3.new(-6, 0, 16.8), Vector3.new(-27, 0, -12) } do
 		local s = model("WetFloorSign" .. i, p)
 		for _, side in { -1, 1 } do
-			local leaf = part({ Name = "Leaf", Size = Vector3.new(1.3, 2.4, 0.08), CFrame = CFrame.new(v + Vector3.new(0, 1.15, side * 0.28)) * CFrame.Angles(math.rad(side * 13), math.rad(20 * i), 0), Material = M.Plastic, Color = Color3.fromRGB(235, 200, 40), Parent = s })
+			-- an A-frame: both leaves lean in so their tops meet
+			local base = CFrame.new(v) * CFrame.Angles(0, math.rad(20 * i), 0)
+			local leaf = part({ Name = "Leaf", Size = Vector3.new(1.3, 2.4, 0.08), CFrame = base * CFrame.new(0, 1.15, side * 0.28) * CFrame.Angles(math.rad(-side * 13), 0, 0), Material = M.Plastic, Color = Color3.fromRGB(235, 200, 40), Parent = s })
 			label(surfaceGui(leaf, if side > 0 then Enum.NormalId.Back else Enum.NormalId.Front, 60), "CAUTION\nWET\nFLOOR", { TextColor3 = Color3.fromRGB(30, 30, 30) })
 		end
 	end
@@ -747,7 +751,7 @@ local function buildBackRoom(store: Instance)
 	})
 	note.Orientation = Vector3.new(0, 12, 0)
 	local noteText = label(surfaceGui(note, Enum.NormalId.Top, 100), "", { Name = "NoteText", TextColor3 = Color3.fromRGB(30, 30, 60) })
-	noteText.Font = Enum.Font.Arcade
+	noteText.FontFace = Fonts.Sign
 	-- photo frame on the wall above the desk
 	local frame = part({
 		Name = "PhotoFrame", Size = Vector3.new(0.2, 4.6, 3.6), Position = Vector3.new(46.9, 7.2, -12),
@@ -1035,6 +1039,46 @@ function StoreBuilder.SetupLighting()
 	cc.Parent = Lighting
 end
 
+-- Stretches the finished store (see Shared/Layout): every part's centre is mapped; a part at least
+-- 3 studs long along a world axis is resized so both its ends land where they map to (walls,
+-- floors, shelves, counters and doors grow with the room; small props just spread out). Rotated
+-- parts only move. Saved positions (door ClosedCFrame, product OrigCFrame) follow.
+local function stretch(store: Instance)
+	for _, p in store:GetDescendants() do
+		if not p:IsA("BasePart") then
+			continue
+		end
+		local cf = p.CFrame
+		local pos = cf.Position
+		local size = { p.Size.X, p.Size.Y, p.Size.Z }
+		local axes = { cf.RightVector, cf.UpVector, cf.LookVector }
+		local nx, nz = Layout.MapX(pos.X), Layout.MapZ(pos.Z)
+		for i, axis in axes do
+			local len = size[i]
+			if len >= 3 then
+				if math.abs(axis.X) > 0.99 then
+					local a, b = Layout.MapX(pos.X - len / 2), Layout.MapX(pos.X + len / 2)
+					size[i] = b - a
+					nx = (a + b) / 2
+				elseif math.abs(axis.Z) > 0.99 then
+					local a, b = Layout.MapZ(pos.Z - len / 2), Layout.MapZ(pos.Z + len / 2)
+					size[i] = b - a
+					nz = (a + b) / 2
+				end
+			end
+		end
+		p.Size = Vector3.new(size[1], size[2], size[3])
+		p.CFrame = CFrame.new(nx, pos.Y, nz) * cf.Rotation
+		if p:GetAttribute("ClosedCFrame") ~= nil then
+			p:SetAttribute("ClosedCFrame", p.CFrame)
+		end
+		if p:GetAttribute("OrigCFrame") ~= nil then
+			p:SetAttribute("OrigCFrame", p.CFrame)
+			p:SetAttribute("OrigSize", p.Size)
+		end
+	end
+end
+
 function StoreBuilder.Build(): Model
 	local existing = workspace:FindFirstChild("Store")
 	if existing then
@@ -1058,6 +1102,7 @@ function StoreBuilder.Build(): Model
 	buildSpillMarkers(store)
 	buildLeaderboard(store)
 	buildShiftBoard(store)
+	stretch(store)
 	folder("Spills", store)
 	folder("EventProps", store)
 	store:SetAttribute("Power", true)

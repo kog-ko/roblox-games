@@ -422,6 +422,26 @@ function Monetization.Init(s: Instance)
 				player.Character:PivotTo((door :: BasePart).CFrame * CFrame.new(0, 0, -3) + Vector3.new(0, 0, 0))
 			end
 		end)
+		-- however someone got in (a jump, a glitch, a pass that's gone), no VIP = back outside
+		local zone = store:FindFirstChild("VIPZone", true)
+		if zone and zone:IsA("BasePart") then
+			task.spawn(function()
+				while zone.Parent do
+					for _, player in Players:GetPlayers() do
+						local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+						if root and not player:GetAttribute("VIP") then
+							local rel = zone.CFrame:PointToObjectSpace(root.Position)
+							local half = zone.Size / 2
+							if math.abs(rel.X) < half.X and math.abs(rel.Y) < half.Y and math.abs(rel.Z) < half.Z then
+								player.Character:PivotTo((door :: BasePart).CFrame * CFrame.new(0, 0, -4))
+								Banner:FireClient(player, "VIP ONLY. GET VIP IN THE SHOP", "VIP")
+							end
+						end
+					end
+					task.wait(0.4)
+				end
+			end)
+		end
 	end
 
 	MarketplaceService.ProcessReceipt = processReceipt

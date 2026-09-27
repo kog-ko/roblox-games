@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local RequestPurchase = Remotes:WaitForChild("RequestPurchase") :: RemoteEvent
 local Banner = Remotes:WaitForChild("Banner") :: RemoteEvent
@@ -40,7 +41,7 @@ local function offerButton(gui: ScreenGui, name: string, text: string, pos: UDim
 	local b = make("TextButton", {
 		Name = name, Text = text, Visible = false, AnchorPoint = Vector2.new(0.5, 0.5), Position = pos,
 		Size = UDim2.fromOffset(340, 58), BackgroundColor3 = Color3.fromRGB(255, 205, 70), BorderSizePixel = 0,
-		Font = Enum.Font.Arcade, TextScaled = true, TextColor3 = Color3.fromRGB(20, 15, 5), ZIndex = 10, Parent = gui,
+		FontFace = Fonts.Body, TextScaled = true, TextColor3 = Color3.fromRGB(20, 15, 5), ZIndex = 10, Parent = gui,
 	})
 	make("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = b })
 	make("UIStroke", { Color = Color3.fromRGB(40, 30, 10), Thickness = 2, Parent = b })
@@ -58,7 +59,7 @@ function Offers.Start()
 	local banner = make("TextLabel", {
 		Name = "Banner", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 120),
 		Size = UDim2.fromOffset(640, 54), BackgroundColor3 = Color3.fromRGB(20, 16, 6), BackgroundTransparency = 0.15,
-		BorderSizePixel = 0, Font = Enum.Font.Arcade, TextScaled = true, TextColor3 = Color3.fromRGB(255, 215, 90),
+		BorderSizePixel = 0, FontFace = Fonts.Body, TextScaled = true, TextColor3 = Color3.fromRGB(255, 215, 90),
 		Visible = false, Text = "", Parent = gui,
 	}) :: TextLabel
 	make("UIStroke", { Color = Color3.fromRGB(255, 215, 90), Thickness = 2, Parent = banner })
@@ -120,23 +121,23 @@ function Offers.Start()
 	}) :: Frame
 	make("UIStroke", { Color = Color3.fromRGB(255, 215, 90), Thickness = 3, Parent = pop })
 	make("TextLabel", {
-		BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 10), Size = UDim2.new(1, -24, 0, 40), Font = Enum.Font.Arcade,
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 10), Size = UDim2.new(1, -24, 0, 40), FontFace = Fonts.Body,
 		TextScaled = true, TextColor3 = Color3.fromRGB(255, 215, 90), Text = "STARTER PACK", ZIndex = 21, Parent = pop,
 	})
 	make("TextLabel", {
-		BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 56), Size = UDim2.new(1, -24, 0, 70), Font = Enum.Font.Arcade,
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 56), Size = UDim2.new(1, -24, 0, 70), FontFace = Fonts.Body,
 		TextScaled = true, TextColor3 = Color3.fromRGB(225, 230, 210), ZIndex = 21, Parent = pop,
 		Text = string.format("$%d CASH + 2X PAYCHECK FOR %d HOURS. ONE-TIME OFFER, %d HOURS ONLY.",
 			MON.Rewards.StarterCash, MON.Rewards.StarterDoublePayHours, MON.Rewards.StarterOfferHours),
 	})
 	local buy = make("TextButton", {
 		Name = "Buy", Text = "BUY", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, -8, 1, -14), Size = UDim2.fromOffset(160, 50),
-		BackgroundColor3 = Color3.fromRGB(120, 190, 110), BorderSizePixel = 0, Font = Enum.Font.Arcade, TextScaled = true,
+		BackgroundColor3 = Color3.fromRGB(120, 190, 110), BorderSizePixel = 0, FontFace = Fonts.Body, TextScaled = true,
 		TextColor3 = Color3.fromRGB(15, 15, 15), ZIndex = 21, Parent = pop,
 	}) :: TextButton
 	local later = make("TextButton", {
 		Name = "Later", Text = "LATER", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0.5, 8, 1, -14), Size = UDim2.fromOffset(160, 50),
-		BackgroundColor3 = Color3.fromRGB(90, 90, 85), BorderSizePixel = 0, Font = Enum.Font.Arcade, TextScaled = true,
+		BackgroundColor3 = Color3.fromRGB(90, 90, 85), BorderSizePixel = 0, FontFace = Fonts.Body, TextScaled = true,
 		TextColor3 = Color3.fromRGB(15, 15, 15), ZIndex = 21, Modal = true, Parent = pop,
 	}) :: TextButton
 	buy.Activated:Connect(function()

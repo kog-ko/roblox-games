@@ -38,6 +38,7 @@ local Cosmetics: { Slots: { string }, SlotNames: { [string]: string }, Items: { 
 		{ Id = "VestHazard", Slot = "Vest", Name = "HAZARD ORANGE", Price = 2500, Color = C(240, 120, 20), Material = "Neon" },
 		{ Id = "VestBlack", Slot = "Vest", Name = "MIDNIGHT", Price = 6000, Color = C(15, 15, 18), Material = "Metal" },
 		{ Id = "VestHolo", Slot = "Vest", Name = "HOLOGRAPHIC", Price = 25000, Color = C(150, 220, 255), Material = "Glass" },
+		{ Id = "VestMonth", Slot = "Vest", Name = "EMPLOYEE OF THE MONTH", Price = 0, Earned = true, Hint = "30-DAY CLOCK-IN STREAK", Color = C(40, 110, 70), Material = "Fabric" },
 		{ Id = "VestGold", Slot = "Vest", Name = "GOLD FOIL", Price = 100000, Color = C(230, 190, 60), Material = "Foil", Vip = true },
 		-- Trails
 		{ Id = "TrailNone", Slot = "Trail", Name = "NO TRAIL", Price = 0 },
@@ -52,6 +53,7 @@ local Cosmetics: { Slots: { string }, SlotNames: { [string]: string }, Items: { 
 		{ Id = "TagMint", Slot = "Tag", Name = "MINT", Price = 1500, Color = C(120, 240, 180) },
 		{ Id = "TagBlood", Slot = "Tag", Name = "CRIMSON", Price = 4000, Color = C(230, 50, 50) },
 		{ Id = "TagIce", Slot = "Tag", Name = "ICE", Price = 8000, Color = C(170, 220, 255) },
+		{ Id = "TagStreak", Slot = "Tag", Name = "ON THE CLOCK", Price = 0, Earned = true, Hint = "7-DAY CLOCK-IN STREAK", Color = C(255, 140, 40) },
 		{ Id = "TagRainbow", Slot = "Tag", Name = "RAINBOW", Price = 30000, Rainbow = true },
 		-- Mops
 		{ Id = "MopPlain", Slot = "Mop", Name = "STANDARD ISSUE", Price = 0 },

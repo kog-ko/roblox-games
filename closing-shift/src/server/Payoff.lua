@@ -3,6 +3,7 @@
 -- The personal bits (photo + name) are set on each client, so everyone sees *themselves*.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
+local Layout = require(game:GetService("ReplicatedStorage").Shared.Layout)
 local Badges = require(script.Parent.Badges)
 
 local Payoff = {}
@@ -17,7 +18,7 @@ function Payoff.Run(cleaner: Player?)
 	prompt.Enabled = true
 	-- camera: by the front wall, looking past the desk at the old photos and the big frame.
 	-- Aimed away from the open door, which would otherwise fill the left of the shot.
-	local camCF = CFrame.lookAt(Vector3.new(38, 7.5, -5.2), Vector3.new(43, 6, -14))
+	local camCF = CFrame.lookAt(Layout.Map(Vector3.new(38, 7.5, -5.2)), Layout.Map(Vector3.new(43, 6, -14)))
 	payoffCue:FireAllClients(camCF, if cleaner then cleaner.DisplayName else "")
 	task.wait(Config.PayoffTime)
 end

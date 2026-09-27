@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("Rules"))
+local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local PickNight = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PickNight") :: RemoteEvent
 
 local NightPicker = {}
@@ -59,7 +60,7 @@ function NightPicker.Start()
 	title.BackgroundTransparency = 1
 	title.Position = UDim2.fromOffset(10, 8)
 	title.Size = UDim2.new(1, -20, 0, 34)
-	title.Font = Enum.Font.Arcade
+	title.FontFace = Fonts.Body
 	title.TextScaled = true
 	title.TextColor3 = Color3.fromRGB(240, 225, 180)
 	title.Text = "PICK TONIGHT'S SHIFT"
@@ -82,7 +83,7 @@ function NightPicker.Start()
 		b.Position = UDim2.fromOffset(12, 48 + (i - 1) * 70)
 		b.Size = UDim2.new(1, -24, 0, 62)
 		b.BorderSizePixel = 0
-		b.Font = Enum.Font.Arcade
+		b.FontFace = Fonts.Body
 		b.TextScaled = true
 		b.TextXAlignment = Enum.TextXAlignment.Left
 		b.AutoButtonColor = true
@@ -109,7 +110,7 @@ function NightPicker.Start()
 	close.Size = UDim2.fromOffset(140, 40)
 	close.BackgroundColor3 = Color3.fromRGB(90, 90, 85)
 	close.BorderSizePixel = 0
-	close.Font = Enum.Font.Arcade
+	close.FontFace = Fonts.Body
 	close.TextScaled = true
 	close.Text = "CLOSE"
 	close.Modal = true -- frees the mouse from first person while the picker is open
