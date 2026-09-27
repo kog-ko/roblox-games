@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local playerGui = (Players.LocalPlayer :: Player):WaitForChild("PlayerGui") :: PlayerGui
 playerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeSensor
 
+require(script:WaitForChild("Prefs")).Start()
 require(script:WaitForChild("Overlay")).Start()
 require(script:WaitForChild("SoundFx")).Start()
 require(script:WaitForChild("Music")).Start("Store")
@@ -25,6 +26,7 @@ require(script:WaitForChild("ManagerView")).Start()
 require(script:WaitForChild("CatchFx")).Start()
 require(script:WaitForChild("GrabFx")).Start()
 require(script:WaitForChild("Tension")).Start()
+require(script:WaitForChild("Tips")).Start()
 require(script:WaitForChild("Locker")).Start()
 require(script:WaitForChild("Shop")).Start()
 require(script:WaitForChild("Offers")).Start()

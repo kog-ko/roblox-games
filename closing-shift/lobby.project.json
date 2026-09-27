@@ -23,7 +23,8 @@
         "Jobs": { "$path": "src/server/Jobs.lua" },
         "Achievements": { "$path": "src/server/Achievements.lua" },
         "SeasonDecor": { "$path": "src/server/SeasonDecor.lua" },
-        "ShiftPass": { "$path": "src/server/ShiftPass.lua" }
+        "ShiftPass": { "$path": "src/server/ShiftPass.lua" },
+        "PlayerPrefs": { "$path": "src/server/PlayerPrefs.lua" }
       }
     },
     "StarterPlayer": {
@@ -34,7 +35,9 @@
           "Offers": { "$path": "src/client/Offers.lua" },
           "Locker": { "$path": "src/client/Locker.lua" },
           "Shop": { "$path": "src/client/Shop.lua" },
-          "Music": { "$path": "src/client/Music.lua" }
+          "Music": { "$path": "src/client/Music.lua" },
+          "Fit": { "$path": "src/client/Fit.lua" },
+          "Prefs": { "$path": "src/client/Prefs.lua" }
         }
       }
     }

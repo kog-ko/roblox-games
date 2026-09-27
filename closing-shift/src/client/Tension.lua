@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local CameraFx = require(script.Parent:WaitForChild("CameraFx"))
 local Music = require(script.Parent:WaitForChild("Music"))
+local Prefs = require(script.Parent:WaitForChild("Prefs"))
 
 local Tension = {}
 local player = Players.LocalPlayer :: Player
@@ -129,9 +130,10 @@ function Tension.Start()
 		acc += dt
 		if acc >= 0.05 then
 			acc = 0
-			local burst = now < burstUntil
+			local burst = now < burstUntil and Prefs.On("ScreenFx")
+			local fx = Prefs.On("ScreenFx")
 			for _, b in bars do
-				if (burst or level > 0.35) and rng:NextNumber() < (if burst then 0.9 else level * 0.45) then
+				if fx and (burst or level > 0.35) and rng:NextNumber() < (if burst then 0.9 else level * 0.45) then
 					b.Position = UDim2.fromScale(0, rng:NextNumber())
 					b.Size = UDim2.new(1, 0, 0, rng:NextInteger(1, if burst then 14 else 5))
 					b.BackgroundTransparency = rng:NextNumber(0.55, 0.85)
@@ -139,7 +141,7 @@ function Tension.Start()
 					b.BackgroundTransparency = 1
 				end
 			end
-			wash.BackgroundTransparency = if burst then rng:NextNumber(0.55, 0.75) else 1 - math.max(0, level - 0.6) * rng:NextNumber(0.05, 0.25)
+			wash.BackgroundTransparency = if not fx then 1 elseif burst then rng:NextNumber(0.55, 0.75) else 1 - math.max(0, level - 0.6) * rng:NextNumber(0.05, 0.25)
 		end
 	end)
 end

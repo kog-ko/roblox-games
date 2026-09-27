@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Layout = require(ReplicatedStorage.Shared.Layout)
+local PlayerPrefs = require(script.Parent.PlayerPrefs)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ViewReport = Remotes:WaitForChild("ViewReport") :: UnreliableRemoteEvent
@@ -346,8 +347,10 @@ local function grab(player: Player)
 	for _ = 1, G.Hits do
 		table.insert(zones, rng:NextNumber(0.12, 0.88 - width))
 	end
+	-- the first grab ever waits a little longer, so the tip explaining the check can be read
+	local intro = G.Intro + (if PlayerPrefs.HasSeen(player, "Grab") then 0 else 2.2)
 	local g: Grab = {
-		start = workspace:GetServerTimeNow() + G.Intro,
+		start = workspace:GetServerTimeNow() + intro,
 		window = G.Window,
 		period = math.max(G.MinPeriod, G.Period - G.PeriodShrink * escapes),
 		zones = zones,
@@ -373,7 +376,7 @@ local function grab(player: Player)
 	walking = false
 	player:SetAttribute("Grabbed", true)
 	GrabRemote:FireClient(player, { Start = g.start, Window = g.window, Period = g.period, Zones = g.zones, Width = g.width })
-	task.delay(G.Intro + G.Window + 0.6, function()
+	task.delay(intro + G.Window + 0.6, function()
 		resolve(player, false) -- ran out of time
 	end)
 end

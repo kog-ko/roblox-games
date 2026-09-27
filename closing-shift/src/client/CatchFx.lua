@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
+local Prefs = require(script.Parent:WaitForChild("Prefs"))
 local Caught = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Caught") :: RemoteEvent
 
 local CatchFx = {}
@@ -85,8 +86,9 @@ function CatchFx.Start()
 			return
 		end
 		static.Visible = true
+		local fx = Prefs.On("ScreenFx") -- off: a plain dark screen instead of flashing static
 		for _, c in cells do
-			local v = rng:NextNumber(0.05, 0.85)
+			local v = if fx then rng:NextNumber(0.05, 0.85) else 0.06
 			c.BackgroundColor3 = Color3.new(v, v, v * 1.05)
 		end
 	end)

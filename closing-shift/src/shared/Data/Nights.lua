@@ -19,6 +19,8 @@
 --   Dark         the power is out for the whole shift; spills only show up in your flashlight
 --   Endless      no clock, no back-room spill: survive as long as you can (Overtime)
 --   UnlockAt     (endless modes) available once the crew's Unlocked night reaches this
+--   LateCustomer the rare Late Customer comes in every time (not just sometimes)
+--   Decor        dressing for the store during this night (server NightDecor.lua)
 local Nights = {
 	{
 		Name = "Orientation",
@@ -59,7 +61,7 @@ local Nights = {
 		SpillsPerExtra = 7,
 		TimePerExtra = 0.12,
 		BigSpillChance = 0.3,
-		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "LightsOut", "Leak" },
+		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "LightsOut", "Leak", "Payphone", "WindowFace" },
 		EventGap = { 40, 65 },
 		Manager = { Enabled = true, Speed = 11 },
 		PowerCuts = { Enabled = true, Every = { 45, 75 }, Duration = { 10, 18 } },
@@ -75,15 +77,33 @@ local Nights = {
 		SpillsPerExtra = 7,
 		TimePerExtra = 0.12,
 		BigSpillChance = 0.3,
-		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "Leak" },
+		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "Leak", "Payphone", "WindowFace" },
 		EventGap = { 40, 65 },
 		Manager = { Enabled = true, Speed = 12.5 },
 		PowerCuts = { Enabled = false, Every = { 60, 90 }, Duration = { 8, 12 } },
 		Dark = true,
 		Store = "QuikStop",
 		Tutorial = false,
-		Tease = "NIGHT 5 COMING SOON. TRY OVERTIME IN THE MEANTIME.",
+		Tease = "Tomorrow is the grand opening. Everyone will be there.",
 		WinBonus = 160,
+	},
+	{
+		Name = "Grand Opening",
+		SpillCount = 26,
+		ShiftLength = 8 * 60,
+		SpillsPerExtra = 8,
+		TimePerExtra = 0.12,
+		BigSpillChance = 0.35,
+		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "LightsOut", "Leak", "Payphone", "WindowFace" },
+		EventGap = { 30, 50 },
+		Manager = { Enabled = true, Speed = 13 },
+		PowerCuts = { Enabled = true, Every = { 50, 80 }, Duration = { 10, 16 } },
+		LateCustomer = true,
+		Decor = "GrandOpening",
+		Store = "QuikStop",
+		Tutorial = false,
+		Tease = "",
+		WinBonus = 220,
 	},
 	-- OVERTIME: endless. No clock and no back-room spill; spills keep coming (Config.Overtime) and
 	-- the shift ends when the mess gets out of hand. Opens once you've beaten Night 3.
@@ -96,7 +116,7 @@ local Nights = {
 		SpillsPerExtra = 4,
 		TimePerExtra = 0,
 		BigSpillChance = 0.25,
-		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "LightsOut", "Leak" },
+		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "LightsOut", "Leak", "Payphone", "WindowFace" },
 		EventGap = { 35, 60 },
 		Manager = { Enabled = true, Speed = 9 },
 		PowerCuts = { Enabled = true, Every = { 60, 100 }, Duration = { 8, 14 } },

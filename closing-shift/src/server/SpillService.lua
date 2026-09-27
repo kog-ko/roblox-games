@@ -283,6 +283,23 @@ local function makeSpill(parts: { BasePart }, anchorPos: Vector3, isFinal: boole
 	return spill
 end
 
+-- The height of the floor under a spot (the walk-in freezer's floor is raised). The ray starts just
+-- above the marker, so something tall standing there (a crate) is skipped, not landed on.
+local floorParams = RaycastParams.new()
+floorParams.FilterType = Enum.RaycastFilterType.Exclude
+floorParams.RespectCanCollide = true
+local function floorY(pos: Vector3): number
+	local exclude: { Instance } = { folder }
+	for _, p in game:GetService("Players"):GetPlayers() do
+		if p.Character then
+			table.insert(exclude, p.Character)
+		end
+	end
+	floorParams.FilterDescendantsInstances = exclude
+	local hit = workspace:Raycast(Vector3.new(pos.X, 1.25, pos.Z), Vector3.new(0, -3, 0), floorParams)
+	return if hit then hit.Position.Y else 0
+end
+
 local function puddle(pos: Vector3, radius: number, color: Color3): BasePart
 	local p = Instance.new("Part")
 	p.Name = "Puddle"
@@ -295,13 +312,14 @@ local function puddle(pos: Vector3, radius: number, color: Color3): BasePart
 	p.Color = color
 	p.Transparency = 0.15
 	p.Size = Vector3.new(0.08, radius * 2, radius * 2)
-	p.CFrame = CFrame.new(pos.X, 0.1, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
+	p.CFrame = CFrame.new(pos.X, pos.Y + 0.05, pos.Z) * CFrame.Angles(0, 0, math.rad(90))
 	return p
 end
 
 -- big: a big spill (bigger, two cleans).
 function SpillService.Spawn(pos: Vector3, isFinal: boolean?, big: boolean?)
 	local color = if isFinal then Color3.fromRGB(40, 40, 45) else COLORS[rng:NextInteger(1, #COLORS)]
+	pos = Vector3.new(pos.X, floorY(pos), pos.Z) -- sit on whatever floor is there
 	local r = rng:NextNumber(Config.SpillMinRadius, Config.SpillMaxRadius)
 	if big and not isFinal then
 		r *= Config.BigSpillScale

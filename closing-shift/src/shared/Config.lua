@@ -260,6 +260,8 @@ Config.Sounds = {
 	-- events
 	CandyPickup = id(1839997929), -- picking up event candy (APM)
 	PumpkinSting = id(9047014546), -- the jack-o'-lantern (APM Beautiful Horror stinger 2)
+	PayphoneRing = id(9117304268), -- the payphone out front (old rattly bell, loops)
+	PhonePickUp = id(9117145638), -- ...and someone picks it up
 }
 
 -- Music. All licensed for Roblox experiences (DistroKid catalogue). M toggles music on and off.
@@ -273,6 +275,26 @@ Config.Music = {
 Config.ScrubLoop = NumberRange.new(1, 3) -- seconds of the scrub clip looped while mopping
 Config.PitchVariation = 0.08 -- every one-shot plays at 1 +/- this speed so repeats don't sound robotic
 Config.Volumes = { Ambient = 0.35, Hum = 0.25, Fridge = 0.3, UI = 0.4, Sting = 0.8 }
+
+-- The gear menu (both places). All on by default; each is saved per player (PlayerPrefs).
+Config.Settings = {
+	{ Key = "Shake", Name = "CAMERA SHAKE & TILT" },
+	{ Key = "Bob", Name = "HEAD BOB" },
+	{ Key = "ScreenFx", Name = "SCREEN EFFECTS (SCANLINES, GRAIN, STATIC)" },
+	{ Key = "Music", Name = "MUSIC" },
+}
+
+-- First-time tips (client Tips.lua): each shown once, the first time its moment happens.
+Config.Tips = {
+	{ Id = "Manager", Text = "THE NIGHT MANAGER IS IN. HE ONLY MOVES WHEN NOBODY IS LOOKING. KEEP HIM ON SCREEN." },
+	{ Id = "Grab", Text = "HE'S GOT YOU. PRESS WHEN THE NEEDLE IS IN THE GREEN, TWICE. BREAKING FREE COSTS NOTHING." },
+	{ Id = "LateCustomer", Text = "SOMEONE CAME IN. STARE IT DOWN: KEEP IT ON SCREEN FOR A FEW SECONDS AND IT'S GONE." },
+	{ Id = "Dark", Text = "THE POWER IS OUT ALL NIGHT. SPILLS ONLY SHOW UP IN YOUR FLASHLIGHT (F)." },
+	{ Id = "Overtime", Text = "OVERTIME: KEEP THE MESS UNDER THE LIMIT. IT ONLY GETS FASTER." },
+	{ Id = "Leak", Text = "A COOLER IS LEAKING. HOLD E ON THE RED VALVE TO SHUT IT OFF." },
+	{ Id = "BigSpill", Text = "BIG SPILL: IT TAKES TWO CLEANS. TWO OF YOU CAN SPLIT IT." },
+	{ Id = "Candy", Text = "EVENT CANDY! WALK INTO IT, THEN SPEND IT IN THE LOBBY WARDROBE." },
+}
 
 -- Old names kept for existing code; the IDs themselves live in Data/Monetization.
 Config.Badges = Config.Monetization.Badges

@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Season = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Season"))
+local Prefs = require(script.Parent:WaitForChild("Prefs"))
 
 local Music = {}
 local MU = Config.Music
@@ -128,9 +129,13 @@ function Music.Start(mode: string)
 			end
 		end
 	end)
+	-- the gear menu's MUSIC switch (M flips it too)
+	Prefs.Watch("Music", function(on)
+		group.Volume = if on then 1 else 0
+	end)
 	ContextActionService:BindAction("ToggleMusic", function(_, state)
 		if state == Enum.UserInputState.Begin then
-			group.Volume = if group.Volume > 0 then 0 else 1
+			Prefs.Set("Music", not Prefs.On("Music"))
 		end
 		return Enum.ContextActionResult.Pass
 	end, false, Enum.KeyCode.M)

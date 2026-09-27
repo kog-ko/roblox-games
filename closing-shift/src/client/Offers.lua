@@ -93,7 +93,7 @@ function Offers.Start()
 	end)
 
 	-- Clock In Late ----------------------------------------------------------
-	local late = offerButton(gui, "ClockInLate", "CLOCK IN LATE: BACK AT 5:00 AM", UDim2.fromScale(0.5, 0.86))
+	local late = offerButton(gui, "ClockInLate", "CLOCK IN LATE: BACK AT 5:00 AM", UDim2.new(0.5, 0, 0, 104)) -- above the results box
 	late.Activated:Connect(function()
 		RequestPurchase:FireServer("ClockInLate")
 	end)

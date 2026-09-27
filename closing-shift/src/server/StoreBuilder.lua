@@ -245,7 +245,7 @@ local function buildCounter(store: Instance)
 	})
 	label(surfaceGui(screen, Enum.NormalId.Left, 60), "$0.00", { TextColor3 = Color3.fromRGB(10, 40, 10) })
 	CollectionService:AddTag(screen, "PoweredNeon")
-	part({ Name = "CashDrawer", Size = Vector3.new(1.6, 0.4, 1.6), Position = Vector3.new(-20, 4, 12.5), Material = M.Metal, Color = Color3.fromRGB(30, 30, 30), Parent = reg })
+	part({ Name = "CashDrawer", Size = Vector3.new(1.6, 0.4, 1.6), Position = Vector3.new(-20, 4.3, 12.5), Material = M.Metal, Color = Color3.fromRGB(30, 30, 30), Parent = reg })
 	-- back shelf behind the counter: unlabeled packs and bottles
 	part({ Name = "BackShelf", Size = Vector3.new(1.5, 7, 12), Position = Vector3.new(-29.2, 3.5, 10), Material = M.WoodPlanks, Color = wood, Parent = c })
 	for row = 0, 2 do
@@ -943,7 +943,7 @@ local function buildSpillMarkers(store: Instance)
 			table.insert(zones, "Stockroom")
 		end
 	end
-	for _, x in { -10, 5, 20 } do
+	for _, x in { -10, 12, 20 } do -- (x 5 at the back was under the forklift)
 		for _, z in { -24.5, -56 } do
 			table.insert(points, Vector3.new(x, 0.05, z))
 			table.insert(zones, "Stockroom")

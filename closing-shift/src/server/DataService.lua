@@ -30,6 +30,8 @@ export type Profile = {
 	Achievements: { [string]: number }, -- achievement id -> os.time() earned
 	Candy: number, -- the running event's currency (Data/Seasons)
 	Pass: { Id: string, Xp: number, Free: number, Premium: number }, -- Shift Pass season progress
+	Settings: { [string]: boolean }, -- gear-menu settings turned off (Config.Settings; missing = on)
+	Tips: { [string]: boolean }, -- first-time tips already shown
 	LoadFailed: boolean?,
 }
 
@@ -104,6 +106,8 @@ local function blank(): Profile
 		Achievements = {},
 		Candy = 0,
 		Pass = { Id = "", Xp = 0, Free = 0, Premium = 0 },
+		Settings = {},
+		Tips = {},
 	}
 end
 
@@ -200,6 +204,20 @@ local function fromStored(data: any): Profile
 	end
 	p.DoublePayUntil = tonumber(data.DoublePayUntil) or 0
 	p.Candy = tonumber(data.Candy) or 0
+	if type(data.Settings) == "table" then
+		for k, v in data.Settings do
+			if type(v) == "boolean" then
+				p.Settings[tostring(k)] = v
+			end
+		end
+	end
+	if type(data.Tips) == "table" then
+		for k, v in data.Tips do
+			if v == true then
+				p.Tips[tostring(k)] = true
+			end
+		end
+	end
 	if type(data.Pass) == "table" then
 		p.Pass.Id = tostring(data.Pass.Id or "")
 		p.Pass.Xp = tonumber(data.Pass.Xp) or 0
@@ -324,6 +342,14 @@ function DataService.Save(player: Player): boolean
 			-- this server's session is the authority for spendable values
 			out.Cash = p.Cash
 			out.Candy = p.Candy
+			-- settings follow this session; tips seen are never forgotten
+			out.Settings = table.clone(p.Settings)
+			for k in old.Tips do
+				out.Tips[k] = true
+			end
+			for k in p.Tips do
+				out.Tips[k] = true
+			end
 			-- pass progress only goes forward within a season
 			if old.Pass.Id == p.Pass.Id then
 				out.Pass = {

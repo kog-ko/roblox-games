@@ -13,6 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Fonts = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Fonts"))
+local Prefs = require(script.Parent:WaitForChild("Prefs"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local GrabRemote = Remotes:WaitForChild("Grab") :: RemoteEvent
 local GrabResult = Remotes:WaitForChild("GrabResult") :: RemoteEvent
@@ -125,7 +126,7 @@ function GrabFx.Start()
 			local goal = CFrame.lookAt(eye, look)
 			local a = math.min(1, t / 0.16)
 			a = 1 - (1 - a) ^ 3
-			local shake = if t < 0.6 then 1.6 else 0.45
+			local shake = if not Prefs.On("Shake") then 0 elseif t < 0.6 then 1.6 else 0.45
 			camera.CFrame = from:Lerp(goal, a)
 				* CFrame.Angles(math.rad(rng:NextNumber(-shake, shake)), math.rad(rng:NextNumber(-shake, shake)), math.rad(rng:NextNumber(-shake, shake) * 1.5))
 			camera.FieldOfView = fov0 + (62 - fov0) * math.min(1, t / 0.5)

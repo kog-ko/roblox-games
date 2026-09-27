@@ -1,6 +1,7 @@
 --!strict
 -- CLOSING SHIFT lobby client. Third person here (so you can see everyone's look); the PSX
 -- overlay, the shop, the upgrade locker and the banners are the same modules the shift uses.
+require(script:WaitForChild("Prefs")).Start()
 require(script:WaitForChild("Overlay")).Start()
 require(script:WaitForChild("Music")).Start("Lobby")
 require(script:WaitForChild("LobbySound")).Start()

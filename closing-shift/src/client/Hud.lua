@@ -12,6 +12,7 @@ local Clock = require(Shared:WaitForChild("Clock"))
 local Progress = require(Shared:WaitForChild("Progress"))
 local Season = require(Shared:WaitForChild("Season"))
 local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
+local Fit = require(script.Parent:WaitForChild("Fit"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ReadyUp = Remotes:WaitForChild("ReadyUp") :: RemoteEvent
 local RequestCoffee = Remotes:WaitForChild("RequestCoffee") :: RemoteEvent
@@ -93,6 +94,7 @@ function Hud.Start()
 
 	-- Lobby panel
 	local lobby = box(gui, "Lobby", UDim2.fromOffset(340, 250), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0))
+	Fit.Scale(lobby, Vector2.new(340, 250), Vector2.new(360, 60))
 	text(lobby, "Title", "CLOSING SHIFT", UDim2.new(1, -20, 0, 42), UDim2.fromOffset(10, 8), RED).FontFace = Fonts.Title
 	local nightText = text(lobby, "Night", "NIGHT 1", UDim2.new(1, -20, 0, 22), UDim2.fromOffset(10, 54), Color3.fromRGB(255, 215, 90))
 	text(lobby, "Goal", "MOP EVERY SPILL BEFORE 6:00 AM", UDim2.new(1, -20, 0, 20), UDim2.fromOffset(10, 80))
@@ -111,9 +113,13 @@ function Hud.Start()
 	-- Results
 	local results = box(gui, "Results", UDim2.fromOffset(460, 420), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5))
 	results.Size = UDim2.fromOffset(460, 480)
+	local resultsFit = Fit.Scale(results, Vector2.new(460, 480), Vector2.new(24, 60))
 	local resTitle = text(results, "Title", "", UDim2.new(1, -20, 0, 60), UDim2.fromOffset(10, 10))
 	resTitle.FontFace = Fonts.Title
-	local resBody = text(results, "Body", "", UDim2.new(1, -30, 1, -170), UDim2.fromOffset(15, 76))
+	-- the highlight card: this shift's best moments (server picks them)
+	local resHi = text(results, "Highlights", "", UDim2.new(1, -30, 0, 22), UDim2.fromOffset(15, 70), Color3.fromRGB(255, 215, 90))
+	resHi.FontFace = Fonts.Bold
+	local resBody = text(results, "Body", "", UDim2.new(1, -30, 1, -196), UDim2.fromOffset(15, 100))
 	resBody.FontFace = Fonts.Mono
 	resBody.TextXAlignment = Enum.TextXAlignment.Left
 	resBody.TextYAlignment = Enum.TextYAlignment.Top
@@ -303,9 +309,18 @@ function Hud.Start()
 	ResultsRemote.OnClientEvent:Connect(function(r: any)
 		results.Visible = true
 		nextBtn.Text = "NEXT SHIFT"
-		local scale = results:FindFirstChildOfClass("UIScale") or new("UIScale", { Parent = results })
-		scale.Scale = 0.6
-		TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		local hi = {}
+		if type(r.Highlights) == "table" then
+			for _, h in r.Highlights do
+				if type(h) == "string" then
+					table.insert(hi, "★ " .. h)
+				end
+			end
+		end
+		resHi.Text = table.concat(hi, "   ")
+		local fit = (resultsFit:GetAttribute("Fit") or 1) :: number
+		resultsFit.Scale = fit * 0.6
+		TweenService:Create(resultsFit, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = fit }):Play()
 		if r.Outcome == "Overtime" then
 			local function mmss(s: number?): string
 				return if s then string.format("%d:%02d", s // 60, math.floor(s % 60)) else "--"
@@ -350,7 +365,7 @@ function Hud.Start()
 			resBody.Text ..= "\n\nPAYCHECK\n" .. table.concat(lines, "\n") .. string.format("\nTOTAL  +$%d%s", r.Pay.Total, mult)
 		end
 		if r.Final then
-			resBody.Text ..= string.format("\n\nNIGHT 5 COMING SOON. OVERTIME IS OPEN.\nLIKE THE GAME TO UNLOCK IT FASTER!\nLIKE GOAL: %s", tostring(Config.LikeGoal))
+			resBody.Text ..= string.format("\n\nYOU SURVIVED OPENING WEEK.\nOVERTIME IS OPEN: HOW LONG CAN YOU LAST?\nLIKE THE GAME FOR MORE NIGHTS! (GOAL: %s)", tostring(Config.LikeGoal))
 		elseif r.Outcome ~= "Fired" and type(r.Tease) == "string" and r.Tease ~= "" then
 			resBody.Text ..= "\n\n" .. string.upper(r.Tease)
 		end

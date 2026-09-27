@@ -11,6 +11,7 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Movement = require(script.Parent:WaitForChild("Movement"))
+local Prefs = require(script.Parent:WaitForChild("Prefs"))
 
 local CameraFx = {}
 local player = Players.LocalPlayer :: Player
@@ -72,7 +73,7 @@ function CameraFx.Start()
 			cf = CFrame.new(cf.Position) * CFrame.fromOrientation(snap(rx, step), snap(ry, step), rz)
 		end
 
-		if PSX.HeadBob then
+		if PSX.HeadBob and Prefs.On("Bob") then
 			local char = player.Character
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			local moving = hum ~= nil and hum.MoveDirection.Magnitude > 0.1 and hum.FloorMaterial ~= Enum.Material.Air
@@ -86,7 +87,7 @@ function CameraFx.Start()
 			end
 		end
 
-		if PSX.Tilt then
+		if PSX.Tilt and Prefs.On("Shake") then
 			local char = player.Character
 			local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 			local _, yaw = view:ToOrientation()
@@ -107,11 +108,11 @@ function CameraFx.Start()
 			cf = cf * CFrame.Angles(0, 0, math.rad(roll))
 		end
 
-		if shake > 0.01 then
+		if shake > 0.01 and Prefs.On("Shake") then
 			cf = cf * CFrame.Angles(math.rad(shakeRng:NextNumber(-shake, shake)), math.rad(shakeRng:NextNumber(-shake, shake)), 0)
 		end
 
-		if kick > 0.01 then
+		if kick > 0.01 and Prefs.On("Shake") then
 			cf = cf * CFrame.Angles(math.rad(-kick), 0, 0)
 			kick *= math.exp(-dt * 10)
 		end

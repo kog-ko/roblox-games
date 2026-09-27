@@ -22,6 +22,8 @@ export type Rules = {
 	BigSpillChance: number,
 	Dark: boolean,
 	Endless: boolean,
+	LateCustomer: boolean,
+	Decor: string?,
 }
 
 local Rules = {}
@@ -86,6 +88,8 @@ function Rules.Resolve(night: number, modifiers: { string }?, crew: number?): Ru
 		BigSpillChance = n.BigSpillChance or 0,
 		Dark = n.Dark == true,
 		Endless = n.Endless == true,
+		LateCustomer = n.LateCustomer == true,
+		Decor = n.Decor,
 	}
 	local extra = r.Crew - 1
 	r.SpillCount += (n.SpillsPerExtra or 0) * extra

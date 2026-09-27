@@ -18,12 +18,11 @@ Data/Monetization GamePasses.ShiftPass; until then the premium button stays hidd
 - [x] **Seasonal pass**: ~30 tiers earned by playing, free + premium (Robux) tracks, cosmetics.
 
 ## Later
-- [ ] **Night 5 "Grand Opening"**: everything at once, the Late Customer every night.
+- [x] **Night 5 "Grand Opening"**: everything at once, the Late Customer every night.
 - [ ] **Second store**: the Laundromat (lobby shutter already says COMING SOON): new map, flooding
       machines, basement, its own leaderboards.
-- [ ] **Clip-worthy moments**: rare unscripted scares (payphone rings, face at the window),
-      results-screen highlight card ("broke free 3 times", "caught at 4:58 AM"), bodycam
-      "last 10 seconds before you were caught" replay.
+- [x] **Clip-worthy moments** (part 1): payphone and window-face scares, results highlight card.
+- [ ] **Clip-worthy moments** (part 2): bodycam "last 10 seconds before you were caught" replay.
 - [ ] **Crew roles (3-4 players)**: one player on security cameras in the back office who can
       lock doors briefly; everyone else mops.
 - [ ] **Friend rewards**: bonus for finishing with someone you invited; "brought a friend"
@@ -35,10 +34,10 @@ Data/Monetization GamePasses.ShiftPass; until then the premium button stays hidd
 - [ ] **Weekly modifier**: e.g. double spills / no flashlight / fast Manager, with bonus pay.
 
 ## Polish / trust
-- [ ] Clipping scan of the store and lobby (overlapping parts).
-- [ ] Phone pass: layout and controls on small screens (most players are on mobile).
-- [ ] First-time tips for the grab skill check and the Late Customer.
-- [ ] Accessibility settings: turn off camera shake and screen static.
+- [x] Clipping scan of the store and lobby (overlapping parts).
+- [x] Phone pass: panels scale to fit small screens (Fit.lua). Still worth a test on a real phone.
+- [x] First-time tips for the grab skill check and the Late Customer (+ dark night, Overtime, leak, big spill, candy).
+- [x] Accessibility settings: gear menu (camera shake, head bob, screen effects, music).
 
 ## Needs a live test (the owner tests live flows)
 - [ ] Lobby queue -> shift -> lobby teleport round trip, parties, custom teleport loading screen.

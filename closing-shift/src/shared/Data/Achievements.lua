@@ -21,6 +21,7 @@ local Achievements: { List: { Achievement }, Streaks: { { Days: number, Reward: 
 		{ Id = "win100", Name = "LIFER", Text = "Clear 100 nights", Stat = "ShiftsWon", Goal = 100, Reward = 3000 },
 		{ Id = "allnights", Name = "EVERY NIGHT", Text = "Clear nights 1 to 3", Stat = "NightsCleared", Goal = 3, Reward = 1000 },
 		{ Id = "inventory", Name = "LIGHTS OUT", Text = "Clear Night 4: Inventory", Stat = "NightsCleared", Goal = 4, Reward = 1500 },
+		{ Id = "opening", Name = "GRAND OPENING", Text = "Clear Night 5 and finish opening week", Stat = "NightsCleared", Goal = 5, Reward = 3000 },
 		{ Id = "perfect5", Name = "SPEED CLEANER", Text = "Get 5 fast-shift bonuses", Stat = "FastShifts", Goal = 5, Reward = 600 },
 		{ Id = "mvp10", Name = "EMPLOYEE OF THE NIGHT", Text = "Be crew MVP 10 times", Stat = "Mvps", Goal = 10, Reward = 800 },
 		{ Id = "crew10", Name = "TEAM PLAYER", Text = "Finish 10 nights with a friend", Stat = "CrewShifts", Goal = 10, Reward = 800 },

@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Fonts = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Fonts"))
+local Prefs = require(script.Parent:WaitForChild("Prefs"))
 
 local Overlay = {}
 local PSX = Config.PSX
@@ -184,6 +185,15 @@ function Overlay.Start()
 	if PSX.Grain then
 		buildGrain(gui)
 	end
+	-- the gear menu's SCREEN EFFECTS switch
+	Prefs.Watch("ScreenFx", function(on)
+		for _, name in { "Lines", "Grain", "Flicker" } do
+			local f = gui:FindFirstChild(name)
+			if f and f:IsA("GuiObject") then
+				f.Visible = on
+			end
+		end
+	end)
 	-- the bodycam readout is for the store (the lobby shares this module)
 	if PSX.BodycamOsd then
 		task.spawn(function()

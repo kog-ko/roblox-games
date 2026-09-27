@@ -27,7 +27,8 @@ LobbyBuilder.Pads = {
 	{ Key = "Night2", Night = 2, Color = Color3.fromRGB(255, 190, 70) },
 	{ Key = "Night3", Night = 3, Color = Color3.fromRGB(230, 70, 60) },
 	{ Key = "Night4", Night = 4, Color = Color3.fromRGB(170, 90, 230) },
-	{ Key = "Overtime", Night = 5, Color = Color3.fromRGB(255, 140, 40) },
+	{ Key = "Night5", Night = 5, Color = Color3.fromRGB(255, 90, 170) },
+	{ Key = "Overtime", Night = 6, Color = Color3.fromRGB(255, 140, 40) },
 	{ Key = "Quick", Night = nil, Color = Color3.fromRGB(110, 170, 255) },
 }
 

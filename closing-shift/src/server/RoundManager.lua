@@ -6,6 +6,7 @@ local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Rules = require(ReplicatedStorage.Shared.Rules)
+local Clock = require(ReplicatedStorage.Shared.Clock)
 local SpillService = require(script.Parent.SpillService)
 local EventDirector = require(script.Parent.EventDirector)
 local Payoff = require(script.Parent.Payoff)
@@ -22,6 +23,7 @@ local Zones = require(script.Parent.Zones)
 local Achievements = require(script.Parent.Achievements)
 local LateCustomer = require(script.Parent.LateCustomer)
 local Candy = require(script.Parent.Candy)
+local NightDecor = require(script.Parent.NightDecor)
 local ShiftPass = require(script.Parent.ShiftPass)
 local Season = require(ReplicatedStorage.Shared.Season)
 
@@ -121,6 +123,7 @@ local function resetStore()
 	SpillService.Reset()
 	EventDirector.Cleanup()
 	Candy.Clear()
+	NightDecor.Clear()
 	Payoff.Reset()
 	store:SetAttribute("Power", true)
 end
@@ -197,6 +200,47 @@ local shiftLoop: (Rules.Rules, number) -> number?
 local overtimeLoop: (Rules.Rules, number) -> ()
 local currentRules: Rules.Rules? = nil
 local overtimeSurvived: number? = nil -- seconds the last Overtime run lasted
+local lastCatchAt: { [Player]: string } = {} -- in-game time of each player's latest catch this shift
+
+-- The results screen's highlight card: this player's most dramatic moments of the shift, best first.
+local function highlights(p: Player, rules: Rules.Rules, cleanTime: number?, mvp: number?): { string }
+	local out = {}
+	local escapes = (p:GetAttribute("Escapes") or 0) :: number
+	local catches = (p:GetAttribute("ShiftCatches") or 0) :: number
+	local lc = p:GetAttribute("LateCustomerResult")
+	if cleanTime and not rules.Endless then
+		local spare = rules.ShiftLength - cleanTime
+		if spare < 30 then
+			table.insert(out, string.format("LAST SPILL WITH 0:%02d TO SPARE", math.max(0, math.floor(spare))))
+		end
+	end
+	if escapes >= 2 then
+		table.insert(out, string.format("BROKE FREE %d TIMES", escapes))
+	elseif escapes == 1 then
+		table.insert(out, "BROKE FREE OF THE MANAGER")
+	end
+	if lc == "banished" then
+		table.insert(out, "STARED DOWN THE LATE CUSTOMER")
+	elseif lc == "reached" then
+		table.insert(out, "THE LATE CUSTOMER GOT TO YOU")
+	end
+	if catches > 0 and lastCatchAt[p] then
+		table.insert(out, if catches > 1 then string.format("CAUGHT %d TIMES (LAST AT %s)", catches, lastCatchAt[p]) else "CAUGHT AT " .. lastCatchAt[p])
+	end
+	if finalCleaner == p then
+		table.insert(out, "FOUND THE BACK-ROOM SPILL")
+	end
+	if rules.Dark and ((p:GetAttribute("Cleaned") or 0) :: number) >= 5 then
+		table.insert(out, string.format("CLEANED %d SPILLS IN THE DARK", (p:GetAttribute("Cleaned") or 0) :: number))
+	end
+	if mvp == p.UserId then
+		table.insert(out, "CREW MVP")
+	end
+	if rules.Manager.Enabled and cleanTime and catches == 0 then
+		table.insert(out, "NEVER CAUGHT")
+	end
+	return { out[1], out[2] }
+end
 
 -- Returns clean time in seconds, or nil if the clock ran out.
 local function runShift(rules: Rules.Rules): number?
@@ -207,6 +251,9 @@ local function runShift(rules: Rules.Rules): number?
 		p:SetAttribute("RankedCleaned", 0)
 		p:SetAttribute("CoffeeUsed", false)
 		p:SetAttribute("CaughtThisShift", false)
+		p:SetAttribute("ShiftCatches", 0)
+		p:SetAttribute("LateCustomerResult", nil)
+		lastCatchAt[p] = nil
 		p:SetAttribute("CoffeeUntil", nil)
 		local char = p.Character
 		if char then
@@ -231,6 +278,7 @@ local function runShift(rules: Rules.Rules): number?
 	SpillService.SetEndless(rules.Endless)
 	SpillService.StartRound(rules.SpillCount, open, rules.BigSpillChance)
 	Candy.StartShift(open)
+	NightDecor.Apply(rules.Decor)
 	revivedThisNight = false
 	if rules.Endless then
 		overtimeLoop(rules, now())
@@ -463,6 +511,7 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 		ResultsRemote:FireClient(p, {
 			Outcome = if rules.Endless then "Overtime" elseif cleanTime then "Clean" else "Fired",
 			Survived = if rules.Endless then overtimeSurvived else nil,
+			Highlights = highlights(p, rules, cleanTime, mvp),
 			BestOvertime = prof and (prof.Stats :: any).BestOvertime,
 			CleanTime = cleanTime,
 			Cleaned = p:GetAttribute("Cleaned") or 0,
@@ -589,6 +638,9 @@ function RoundManager.Init(s: Instance)
 	publishNight()
 	Manager.OnCatch = function(player: Player)
 		player:SetAttribute("CaughtThisShift", true)
+		player:SetAttribute("ShiftCatches", ((player:GetAttribute("ShiftCatches") or 0) :: number) + 1)
+		local length = (ReplicatedStorage:GetAttribute("ShiftLength") or 480) :: number
+		lastCatchAt[player] = Clock.Format(now() - shiftStart, length)
 		DataService.Update(player, function(prof)
 			prof.Stats.Catches += 1
 		end)

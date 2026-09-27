@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Rules = require(Shared:WaitForChild("Rules"))
 local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
+local Fit = require(script.Parent:WaitForChild("Fit"))
 local PickNight = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PickNight") :: RemoteEvent
 
 local NightPicker = {}
@@ -58,6 +59,7 @@ function NightPicker.Start()
 	stroke.Thickness = 2
 	stroke.Transparency = 0.4
 	stroke.Parent = panel
+	Fit.Scale(panel, Vector2.new(440, 110 + #Config.Nights * 70), Vector2.new(24, 50))
 	local sizeCap = Instance.new("UISizeConstraint")
 	sizeCap.MaxSize = Vector2.new(440, 10000)
 	sizeCap.Parent = panel

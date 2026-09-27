@@ -215,6 +215,7 @@ local function visit(myRun: number)
 			Banner:FireAllClients("IT'S GONE. IT LEFT A TIP.", "Rare")
 			for p, t in stare do
 				if t > 0.5 and p.Parent then
+					p:SetAttribute("LateCustomerResult", "banished")
 					Economy.AddCash(p, C.Tip, "LateCustomerTip")
 					task.spawn(Achievements.Add, p, "RareBanished")
 				end
@@ -283,6 +284,7 @@ local function visit(myRun: number)
 		if p and root and Vector3.new(root.Position.X - pos.X, 0, root.Position.Z - pos.Z).Magnitude < C.ReachDistance then
 			finish()
 			p:SetAttribute("JammedUntil", workspace:GetServerTimeNow() + C.JamTime)
+			p:SetAttribute("LateCustomerResult", "reached")
 			p:SetAttribute("FlashlightOn", false)
 			Banner:FireClient(p, "\"...CAN I CHECK OUT?\"", "Rare")
 			vanish(m)
@@ -295,7 +297,7 @@ function LateCustomer.Start(rules: any)
 	LateCustomer.Stop()
 	runId += 1
 	local myRun = runId
-	local chance = if rules.Night >= C.MinNight then C.Chance else 0
+	local chance = if rules.LateCustomer then 1 elseif rules.Night >= C.MinNight then C.Chance else 0
 	if RunService:IsStudio() and workspace:GetAttribute("ForceLateCustomer") then
 		chance = 1
 	end
