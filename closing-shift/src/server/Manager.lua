@@ -101,12 +101,15 @@ local function build(): Model
 	block("Neck", Vector3.new(0.5, 0.35, 0.5), Vector3.new(0, 6.65, 0), skin)
 	block("Head", Vector3.new(1.3, 1.5, 1.3), Vector3.new(0, 7.6, 0), skin) -- no face, on purpose...
 	-- ...until he has you: hollow eyes and a mouth that only show during a grab
+	-- (deep sockets with pinprick pupils, and a long gaping mouth)
 	for _, f in {
-		{ "EyeL", Vector3.new(0.3, 0.22, 0.05), Vector3.new(-0.28, 7.8, -0.66) },
-		{ "EyeR", Vector3.new(0.3, 0.22, 0.05), Vector3.new(0.28, 7.8, -0.66) },
-		{ "Mouth", Vector3.new(0.7, 0.42, 0.05), Vector3.new(0, 7.2, -0.66) },
+		{ "EyeL", Vector3.new(0.24, 0.3, 0.05), Vector3.new(-0.27, 7.85, -0.66), Color3.new(0, 0, 0), Enum.Material.SmoothPlastic },
+		{ "EyeR", Vector3.new(0.24, 0.3, 0.05), Vector3.new(0.27, 7.85, -0.66), Color3.new(0, 0, 0), Enum.Material.SmoothPlastic },
+		{ "PupilL", Vector3.new(0.05, 0.05, 0.02), Vector3.new(-0.27, 7.83, -0.69), Color3.fromRGB(255, 240, 220), Enum.Material.Neon },
+		{ "PupilR", Vector3.new(0.05, 0.05, 0.02), Vector3.new(0.27, 7.83, -0.69), Color3.fromRGB(255, 240, 220), Enum.Material.Neon },
+		{ "Mouth", Vector3.new(0.3, 0.62, 0.05), Vector3.new(0, 7.15, -0.66), Color3.fromRGB(8, 0, 0), Enum.Material.SmoothPlastic },
 	} do
-		local fp = block(f[1], f[2], f[3], Color3.new(0, 0, 0))
+		local fp = block(f[1], f[2], f[3], f[4], f[5])
 		fp.Transparency = 1
 		fp:AddTag("ManagerFace")
 	end
@@ -359,7 +362,7 @@ local function grab(player: Player)
 	local from = pivot().Position
 	local dir = flat - from
 	dir = if dir.Magnitude > 0.01 then dir.Unit else Vector3.zAxis
-	local stand = flat - dir * 2.6
+	local stand = flat - dir * 3.3
 	m:PivotTo(CFrame.lookAt(stand, flat))
 	showFace(true)
 	local steps = m.PrimaryPart and m.PrimaryPart:FindFirstChild("Steps") :: Sound?

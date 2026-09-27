@@ -42,7 +42,7 @@ function CameraFx.Start()
 
 	-- no cursor in first person; menus (Modal buttons) unlock the mouse and bring it back
 	RunService.RenderStepped:Connect(function()
-		local locked = UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+		local locked = UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter or player:GetAttribute("Grabbed") == true
 		if UserInputService.MouseIconEnabled == locked then
 			UserInputService.MouseIconEnabled = not locked
 		end

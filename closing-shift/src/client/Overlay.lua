@@ -13,6 +13,8 @@ local Fonts = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Fon
 local Overlay = {}
 local PSX = Config.PSX
 local SPACING = 4
+-- The lobby is a place to hang out: the same look, but much lighter (the store keeps it heavy).
+local LIGHT = game.PlaceId == Config.Places.Lobby
 
 local function frame(parent: Instance, props: { [string]: any }): Frame
 	local f = Instance.new("Frame")
@@ -37,9 +39,9 @@ local function buildLines(gui: ScreenGui)
 		built = size
 		holder:ClearAllChildren()
 		for i = 0, math.ceil(size.Y / SPACING) - 1 do
-			frame(holder, { BackgroundTransparency = 0.82, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.fromOffset(0, i * SPACING) })
+			frame(holder, { BackgroundTransparency = if LIGHT then 0.93 else 0.82, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.fromOffset(0, i * SPACING) })
 		end
-		if PSX.PixelGrid then
+		if PSX.PixelGrid and not LIGHT then
 			for i = 0, math.ceil(size.X / SPACING) - 1 do
 				frame(holder, { BackgroundTransparency = 0.92, Size = UDim2.new(0, 1, 1, 0), Position = UDim2.fromOffset(i * SPACING, 0) })
 			end
@@ -62,7 +64,7 @@ local function buildVignette(gui: ScreenGui)
 		local g = Instance.new("UIGradient")
 		g.Rotation = e.rot
 		g.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0.45),
+			NumberSequenceKeypoint.new(0, if LIGHT then 0.75 else 0.45),
 			NumberSequenceKeypoint.new(1, 1),
 		})
 		g.Parent = f

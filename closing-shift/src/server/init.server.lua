@@ -163,4 +163,33 @@ if game:GetService("RunService"):IsStudio() then
 			end
 		end,
 	}
+	-- The same commands from anywhere that can set a workspace attribute (Studio's test tools run
+	-- in their own Lua state and can't reach _G): workspace:SetAttribute("TestCommand", "night 2"),
+	-- "start", "event Leak", "manager 0 0 10", "freeze 60", "power off", "timeout", "cleanall". Cleared once run.
+	workspace:GetAttributeChangedSignal("TestCommand"):Connect(function()
+		local cmd = workspace:GetAttribute("TestCommand")
+		if type(cmd) ~= "string" or cmd == "" then
+			return
+		end
+		workspace:SetAttribute("TestCommand", nil)
+		local words = string.split(cmd, " ")
+		local c = _G.ClosingShift
+		if words[1] == "night" then
+			c.Night(tonumber(words[2]) or 1)
+		elseif words[1] == "start" then
+			c.Start()
+		elseif words[1] == "event" then
+			c.Event(words[2])
+		elseif words[1] == "manager" then
+			c.ManagerPlace(Vector3.new(tonumber(words[2]) or 0, tonumber(words[3]) or 0, tonumber(words[4]) or 0))
+		elseif words[1] == "timeout" then
+			c.Timeout()
+		elseif words[1] == "freeze" then
+			Manager.Freeze(tonumber(words[2]) or 60)
+		elseif words[1] == "power" then
+			s:SetAttribute("Power", words[2] ~= "off")
+		elseif words[1] == "cleanall" then
+			task.spawn(c.CleanAll)
+		end
+	end)
 end

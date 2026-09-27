@@ -159,6 +159,7 @@ function Obby.Init()
 				Sfx:FireClient(p, "Checkpoint")
 			end
 			run.checkpoint = cp
+		end
 	end)
 	hook("ObbyKill", function(p, root, part, name)
 		-- a short grace after each respawn, and only when really at the hazard (a moved character

@@ -104,6 +104,14 @@ function GrabFx.Start()
 		flash.BackgroundTransparency = 0.15
 		TweenService:Create(flash, TweenInfo.new(0.7), { BackgroundTransparency = 1 }):Play()
 
+		-- nothing on screen but him (and the check)
+		local hidden: { ScreenGui } = {}
+		for _, g in player.PlayerGui:GetChildren() do
+			if g:IsA("ScreenGui") and g.Enabled and (g.Name == "HUD" or g.Name == "Stamina" or g.Name == "Battery") then
+				g.Enabled = false
+				table.insert(hidden, g)
+			end
+		end
 		-- the camera: whipped round to his face and pulled in
 		local from = camera.CFrame
 		local fov0 = camera.FieldOfView
@@ -120,7 +128,7 @@ function GrabFx.Start()
 			local shake = if t < 0.6 then 1.6 else 0.45
 			camera.CFrame = from:Lerp(goal, a)
 				* CFrame.Angles(math.rad(rng:NextNumber(-shake, shake)), math.rad(rng:NextNumber(-shake, shake)), math.rad(rng:NextNumber(-shake, shake) * 1.5))
-			camera.FieldOfView = fov0 + (48 - fov0) * math.min(1, t / 0.5)
+			camera.FieldOfView = fov0 + (62 - fov0) * math.min(1, t / 0.5)
 		end)
 
 		-- the skill check (all times are server time)
@@ -208,6 +216,9 @@ function GrabFx.Start()
 			panel.Visible = false
 			camera.CameraType = Enum.CameraType.Custom
 			camera.FieldOfView = fov0
+			for _, g in hidden do
+				g.Enabled = true
+			end
 			task.delay(0.25, function()
 				if player:GetAttribute("Caught") ~= true then
 					oneShot(S.Escape, 0.8, 1)
