@@ -30,10 +30,10 @@ local SECTIONS = {
 	{ Title = "STARTER PACK", Keys = { "StarterPack" } },
 	{ Title = "BOOSTS (EVERYONE, DURING A SHIFT)", Keys = { "LightsOn", "HireJanitor", "SpillStorm", "ManagerDayOff" } },
 	{ Title = "FOR YOU", Keys = { "ExtraCoffee", "PaycheckSmall", "PaycheckMedium", "PaycheckLarge" } },
-	{ Title = "PASSES", Keys = { "VIP", "IndustrialMop", "BigFlashlight" } },
+	{ Title = "PASSES", Keys = { "VIP", "IndustrialMop", "BigFlashlight", "ShiftPass" } },
 }
 local BOOSTS = { LightsOn = true, HireJanitor = true, SpillStorm = true, ManagerDayOff = true }
-local PASS = { VIP = true, IndustrialMop = true, BigFlashlight = true }
+local PASS = { VIP = true, IndustrialMop = true, BigFlashlight = true, ShiftPass = true }
 
 local function idOf(key: string): number
 	return MON.GamePasses[key] or MON.Products[key] or 0

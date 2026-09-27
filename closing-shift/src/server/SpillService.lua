@@ -26,6 +26,7 @@ type Spill = {
 local SpillService = {}
 -- Hooks set by RoundManager. OnCleaned's third argument is false for cleans that mustn't count
 -- toward rankings (Spill Storm spills, spills the paid janitor cleaned).
+local endless = false -- Overtime: never bring out the back-room spill
 SpillService.OnCleaned = nil :: ((Player, boolean, boolean) -> ())?
 SpillService.OnBigCleaned = nil :: ((Player) -> ())? -- the last clean of a big spill
 SpillService.OnFinalSpawned = nil :: (() -> ())?
@@ -179,8 +180,8 @@ local function finish(spill: Spill, player: Player, assisted: boolean?)
 	if SpillService.OnCleaned then
 		SpillService.OnCleaned(player, spill.IsFinal, not spill.Bonus and not assisted)
 	end
-	-- Everything on the floor is clean: bring out the back-room spill.
-	if next(active) == nil and finalPending and accepting then
+	-- Everything on the floor is clean: bring out the back-room spill (not in Overtime).
+	if next(active) == nil and finalPending and accepting and not endless then
 		finalPending = false
 		local marker = store:FindFirstChild("FinalSpillMarker", true) :: BasePart
 		SpillService.Spawn(marker.Position, true)
@@ -375,6 +376,22 @@ local function openMarkers(): { Instance }
 end
 
 -- True while new spills can still be added (the floor isn't done yet), e.g. for a leaking cooler.
+-- Overtime: no back-room spill; the round just keeps going.
+function SpillService.SetEndless(on: boolean)
+	endless = on
+end
+
+-- Spills on the floor right now.
+function SpillService.ActiveCount(): number
+	local n = 0
+	for _, s in active do
+		if not s.Done then
+			n += 1
+		end
+	end
+	return n
+end
+
 function SpillService.CanAddSpills(): boolean
 	return accepting and finalPending
 end

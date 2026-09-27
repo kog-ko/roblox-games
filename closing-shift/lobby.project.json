@@ -21,7 +21,9 @@
         "Leaderboard": { "$path": "src/server/Leaderboard.lua" },
         "Cosmetics": { "$path": "src/server/Cosmetics.lua" },
         "Jobs": { "$path": "src/server/Jobs.lua" },
-        "Achievements": { "$path": "src/server/Achievements.lua" }
+        "Achievements": { "$path": "src/server/Achievements.lua" },
+        "SeasonDecor": { "$path": "src/server/SeasonDecor.lua" },
+        "ShiftPass": { "$path": "src/server/ShiftPass.lua" }
       }
     },
     "StarterPlayer": {

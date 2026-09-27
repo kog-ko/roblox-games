@@ -18,6 +18,8 @@ Config.Monetization = require(Data:WaitForChild("Monetization"))
 Config.Cosmetics = require(Data:WaitForChild("Cosmetics"))
 Config.Challenges = require(Data:WaitForChild("Challenges"))
 Config.Achievements = require(Data:WaitForChild("Achievements"))
+Config.Seasons = require(Data:WaitForChild("Seasons"))
+Config.Pass = require(Data:WaitForChild("Pass"))
 Config.DefaultNight = 1
 Config.LikeGoal = 1000 -- shown after Night 3: "Like the game to unlock Nights 4-5 faster!"
 Config.DefaultStore = "QuikStop"
@@ -173,6 +175,24 @@ Config.Manager = {
 	},
 }
 
+-- Overtime (the endless mode, Data/Nights "Overtime"). Every RampEvery seconds is a new "hour":
+-- spills come faster and the Manager speeds up. The shift ends when the mess stays at the cap for
+-- Grace seconds.
+Config.Overtime = {
+	SpawnEvery = 9, -- seconds between new spills at the start (one player)...
+	SpawnDecay = 0.85, -- ...times this every hour...
+	MinEvery = 3, -- ...but never faster than this
+	CrewSpeedUp = 0.35, -- spills come this much faster per extra player
+	RampEvery = 90, -- seconds per "hour"
+	ManagerSpeedUp = 0.12, -- +12% Manager speed per hour
+	MessCap = 18, -- spills on the floor at once that end the shift...
+	MessPerExtra = 4, -- ...plus this many per extra player
+	Grace = 10, -- seconds at the cap before it's over
+	CatchMess = 3, -- getting caught tips this many more spills out
+	PayPerMinute = 15, -- paycheck line for each full minute survived
+	WeeklyStoreName = "ClosingShift_Overtime_v1", -- weekly "longest overtime" board (W<n> is added)
+}
+
 -- The rare Late Customer (LateCustomer.lua): some nights someone walks in after closing.
 Config.LateCustomer = {
 	Chance = 0.12, -- per shift
@@ -237,6 +257,9 @@ Config.Sounds = {
 	Bounce = id(1846544949), -- trampolines (APM)
 	ObbyFall = id(9119481927), -- into the mop water
 	QueueBeep = id(9117060347), -- queue countdown ticks
+	-- events
+	CandyPickup = id(1839997929), -- picking up event candy (APM)
+	PumpkinSting = id(9047014546), -- the jack-o'-lantern (APM Beautiful Horror stinger 2)
 }
 
 -- Music. All licensed for Roblox experiences (DistroKid catalogue). M toggles music on and off.

@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local DataService = require(script.Parent.DataService)
 local Economy = require(script.Parent.Economy)
+local Season = require(ReplicatedStorage.Shared.Season)
 
 local Cosmetics = {}
 -- Called after a player's look changes (Mop.Give uses it to repaint a held mop).
@@ -25,7 +26,7 @@ local byId: { [string]: any } = {}
 local defaults: { [string]: string } = {}
 for _, item in DATA.Items do
 	byId[item.Id] = item
-	if item.Price == 0 and not item.Earned and not defaults[item.Slot] then
+	if item.Price == 0 and not item.Earned and not item.Candy and not defaults[item.Slot] then
 		defaults[item.Slot] = item.Id
 	end
 end
@@ -185,8 +186,33 @@ local function buy(player: Player, id: any)
 	end
 	local item = byId[id]
 	local prof = DataService.Get(player)
-	if not item or not prof or prof.Cosmetics.Owned[id] or item.Price == 0 or item.Earned then
-		return -- free, earned-only, or already owned
+	if not item or not prof or prof.Cosmetics.Owned[id] then
+		return
+	end
+	if item.Candy then
+		-- an event item: that event's currency, only while it runs
+		local s = Season.Current()
+		if not s or s.Id ~= item.Season then
+			Banner:FireClient(player, "THAT EVENT IS OVER", "Cosmetic")
+			return
+		end
+		if prof.Candy < item.Candy then
+			Banner:FireClient(player, string.format("NOT ENOUGH %s. FIND MORE ON SHIFTS", s.Currency), "Cosmetic")
+			return
+		end
+		DataService.Update(player, function(p)
+			p.Candy -= item.Candy
+			p.Cosmetics.Owned[id] = true
+			p.Cosmetics.Equipped[item.Slot] = id
+		end)
+		player:SetAttribute("Candy", prof.Candy)
+		Cosmetics.Apply(player)
+		task.spawn(DataService.Save, player)
+		Banner:FireClient(player, "GOT: " .. item.Name, "Cosmetic")
+		return
+	end
+	if item.Price == 0 or item.Earned then
+		return -- free, or earned-only
 	end
 	if item.Vip and not player:GetAttribute("VIP") then
 		Banner:FireClient(player, "VIP ONLY. GET VIP IN THE SHOP", "Cosmetic")
@@ -214,7 +240,7 @@ local function equip(player: Player, id: any)
 	if not item or not prof then
 		return
 	end
-	if (item.Price > 0 or item.Earned) and not prof.Cosmetics.Owned[id] then
+	if (item.Price > 0 or item.Earned or item.Candy) and not prof.Cosmetics.Owned[id] then
 		return -- not bought / not earned yet
 	end
 	if item.Vip and not player:GetAttribute("VIP") then

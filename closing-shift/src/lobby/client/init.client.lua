@@ -11,6 +11,7 @@ local Wardrobe = require(script:WaitForChild("Wardrobe"))
 local PartyUi = require(script:WaitForChild("PartyUi"))
 local JobsUi = require(script:WaitForChild("JobsUi"))
 local AwardsUi = require(script:WaitForChild("AwardsUi"))
+local PassUi = require(script:WaitForChild("PassUi"))
 
 local function openShop()
 	if Shop.Open then
@@ -22,6 +23,7 @@ Wardrobe.Start(openShop)
 PartyUi.Start()
 JobsUi.Start()
 AwardsUi.Start()
+PassUi.Start()
 require(script:WaitForChild("ObbyUi")).Start()
 require(script:WaitForChild("LobbyHud")).Start({
 	Shop = openShop,
@@ -43,6 +45,11 @@ require(script:WaitForChild("LobbyHud")).Start({
 	Awards = function()
 		if AwardsUi.Open then
 			AwardsUi.Open()
+		end
+	end,
+	Pass = function()
+		if PassUi.Open then
+			PassUi.Open()
 		end
 	end,
 })

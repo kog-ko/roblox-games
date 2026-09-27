@@ -28,6 +28,12 @@ local function describe(n: number): string
 	if r.Tutorial then
 		table.insert(tags, "TUTORIAL")
 	end
+	if r.Dark then
+		table.insert(tags, "LIGHTS OFF")
+	end
+	if r.Endless then
+		return "NO CLOCK. HOW LONG CAN YOU LAST?"
+	end
 	return table.concat(tags, "  ")
 end
 
@@ -93,9 +99,9 @@ function NightPicker.Start()
 		pad.PaddingTop = UDim.new(0, 4)
 		pad.PaddingBottom = UDim.new(0, 4)
 		pad.Parent = b
-		b:SetAttribute("Label", string.format("NIGHT %d: %s\n%s", i, string.upper(n.Name), describe(i)))
+		b:SetAttribute("Label", if n.Endless then string.format("%s\n%s", string.upper(n.Name), describe(i)) else string.format("NIGHT %d: %s\n%s", i, string.upper(n.Name), describe(i)))
 		b.Activated:Connect(function()
-			if i <= ((ReplicatedStorage:GetAttribute("GroupUnlocked") or 1) :: number) then
+			if Rules.Available(i, (ReplicatedStorage:GetAttribute("GroupUnlocked") or 1) :: number) then
 				PickNight:FireServer(i)
 				setOpen(false)
 			end
@@ -123,8 +129,8 @@ function NightPicker.Start()
 		local unlocked = (ReplicatedStorage:GetAttribute("GroupUnlocked") or 1) :: number
 		local selected = ReplicatedStorage:GetAttribute("Night")
 		for i, b in buttons do
-			local open = i <= unlocked
-			b.Text = (b:GetAttribute("Label") :: string) .. (if open then "" else "\nLOCKED: BEAT NIGHT " .. (i - 1) .. " FIRST")
+			local open = Rules.Available(i, unlocked)
+			b.Text = (b:GetAttribute("Label") :: string) .. (if open then "" else "\n" .. Rules.LockText(i))
 			b.BackgroundColor3 = if i == selected then Color3.fromRGB(215, 180, 70)
 				elseif open then Color3.fromRGB(120, 190, 110)
 				else Color3.fromRGB(60, 60, 58)

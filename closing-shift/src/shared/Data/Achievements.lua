@@ -19,10 +19,14 @@ local Achievements: { List: { Achievement }, Streaks: { { Days: number, Reward: 
 		{ Id = "win1", Name = "CLOCKED OUT", Text = "Clear a night", Stat = "ShiftsWon", Goal = 1, Reward = 100 },
 		{ Id = "win25", Name = "RELIABLE", Text = "Clear 25 nights", Stat = "ShiftsWon", Goal = 25, Reward = 800 },
 		{ Id = "win100", Name = "LIFER", Text = "Clear 100 nights", Stat = "ShiftsWon", Goal = 100, Reward = 3000 },
-		{ Id = "allnights", Name = "EVERY NIGHT", Text = "Clear every night", Stat = "NightsCleared", Goal = 3, Reward = 1000 },
+		{ Id = "allnights", Name = "EVERY NIGHT", Text = "Clear nights 1 to 3", Stat = "NightsCleared", Goal = 3, Reward = 1000 },
+		{ Id = "inventory", Name = "LIGHTS OUT", Text = "Clear Night 4: Inventory", Stat = "NightsCleared", Goal = 4, Reward = 1500 },
 		{ Id = "perfect5", Name = "SPEED CLEANER", Text = "Get 5 fast-shift bonuses", Stat = "FastShifts", Goal = 5, Reward = 600 },
 		{ Id = "mvp10", Name = "EMPLOYEE OF THE NIGHT", Text = "Be crew MVP 10 times", Stat = "Mvps", Goal = 10, Reward = 800 },
 		{ Id = "crew10", Name = "TEAM PLAYER", Text = "Finish 10 nights with a friend", Stat = "CrewShifts", Goal = 10, Reward = 800 },
+		-- overtime
+		{ Id = "ot5", Name = "PAID BY THE HOUR", Text = "Last 5 minutes in Overtime", Stat = "BestOvertime", Goal = 300, Reward = 400 },
+		{ Id = "ot15", Name = "DOUBLE SHIFT", Text = "Last 15 minutes in Overtime", Stat = "BestOvertime", Goal = 900, Reward = 2000 },
 		-- the Manager
 		{ Id = "caught1", Name = "SENT HOME", Text = "Get caught by the Night Manager", Stat = "Catches", Goal = 1, Reward = 50 },
 		{ Id = "escape1", Name = "NOT TODAY", Text = "Break free of the Night Manager", Stat = "Escapes", Goal = 1, Reward = 200 },
@@ -32,6 +36,8 @@ local Achievements: { List: { Achievement }, Streaks: { { Days: number, Reward: 
 		{ Id = "leak5", Name = "PLUMBER", Text = "Shut off 5 leaks", Stat = "LeaksShut", Goal = 5, Reward = 500 },
 		{ Id = "rare1", Name = "WE'RE CLOSED", Text = "See the late customer", Stat = "RareSeen", Goal = 1, Reward = 500 },
 		{ Id = "rare5", Name = "REGULAR", Text = "Send the late customer away 5 times", Stat = "RareBanished", Goal = 5, Reward = 1500 },
+		-- events
+		{ Id = "candy150", Name = "SWEET TOOTH", Text = "Collect 150 event candy", Stat = "CandyTotal", Goal = 150, Reward = 750 },
 		-- lobby
 		{ Id = "obby1", Name = "PARKOUR", Text = "Clear a lobby obby", Stat = "ObbyClears", Goal = 1, Reward = 100 },
 		{ Id = "obby30", Name = "ROOFTOP REGULAR", Text = "Clear lobby obbies 30 times", Stat = "ObbyClears", Goal = 30, Reward = 1000 },

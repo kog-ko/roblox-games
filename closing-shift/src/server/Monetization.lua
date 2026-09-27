@@ -37,7 +37,7 @@ local Offer = Remotes:WaitForChild("Offer") :: RemoteEvent
 
 local MON = Config.Monetization
 local R = MON.Rewards
-local PASSES = { "VIP", "IndustrialMop", "BigFlashlight" }
+local PASSES = { "VIP", "IndustrialMop", "BigFlashlight", "ShiftPass" }
 
 local Monetization = {}
 -- Analytics hooks: (player, key) when a prompt is shown / a purchase is granted.
@@ -84,6 +84,7 @@ local function applyPerks(player: Player)
 	player:SetAttribute("VIP", vip or nil)
 	player:SetAttribute("IndustrialMop", mop or nil)
 	player:SetAttribute("BigFlashlight", flash or nil)
+	player:SetAttribute("ShiftPass", owns(player, "ShiftPass") or nil) -- ShiftPass.lua hands out the premium rewards
 	player:SetAttribute("BeamMult", if flash then R.BigFlashlightBeam else nil)
 	Economy.ApplyUpgrades(player) -- battery stacks with the Big Flashlight
 	if mop and not hadMop and inShift() and Mop then

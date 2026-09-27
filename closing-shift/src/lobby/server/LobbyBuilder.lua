@@ -26,6 +26,8 @@ LobbyBuilder.Pads = {
 	{ Key = "Night1", Night = 1, Color = Color3.fromRGB(110, 220, 120) },
 	{ Key = "Night2", Night = 2, Color = Color3.fromRGB(255, 190, 70) },
 	{ Key = "Night3", Night = 3, Color = Color3.fromRGB(230, 70, 60) },
+	{ Key = "Night4", Night = 4, Color = Color3.fromRGB(170, 90, 230) },
+	{ Key = "Overtime", Night = 5, Color = Color3.fromRGB(255, 140, 40) },
 	{ Key = "Quick", Night = nil, Color = Color3.fromRGB(110, 170, 255) },
 }
 
@@ -35,6 +37,7 @@ LobbyBuilder.Boards = {
 	{ Key = "Fastest", Title = "FASTEST SHIFTS", Kind = "night" },
 	{ Key = "Earnings", Title = "LIFETIME EARNINGS", Kind = "earnings" },
 	{ Key = "Career", Title = "MOST SPILLS EVER", Kind = "career" },
+	{ Key = "Overtime", Title = "LONGEST OVERTIME (THIS WEEK)", Kind = "overtime" },
 }
 
 local function part(props: { [string]: any }): Part
@@ -144,9 +147,9 @@ local function queuePad(parent: Instance, info: any, x: number)
 	local sign = part({ Name = "Sign", Size = Vector3.new(12, 5, 0.4), Position = Vector3.new(x, 9.5, z - 7.2), Color = Color3.fromRGB(14, 15, 16), Parent = m })
 	local g = surfaceGui(sign, Enum.NormalId.Back, 30)
 	g.Name = "SignGui"
-	local title = if info.Night then "NIGHT " .. info.Night else "QUICK PLAY"
 	local night = info.Night and Config.Nights[info.Night]
-	local sub = if night then string.upper(night.Name) else "BEST NIGHT FOR YOUR CREW"
+	local title = if night and night.Endless then string.upper(night.Name) elseif info.Night then "NIGHT " .. info.Night else "QUICK PLAY"
+	local sub = if night and night.Endless then "ENDLESS. HOW LONG CAN YOU LAST?" elseif night then string.upper(night.Name) else "BEST NIGHT FOR YOUR CREW"
 	label(g, "Title", title, { Size = UDim2.fromScale(1, 0.38), TextColor3 = info.Color })
 	label(g, "Sub", sub, { Position = UDim2.fromScale(0.05, 0.38), Size = UDim2.fromScale(0.9, 0.22) })
 	label(g, "Status", "STEP ON TO QUEUE", { Position = UDim2.fromScale(0.05, 0.64), Size = UDim2.fromScale(0.9, 0.3), TextColor3 = Color3.fromRGB(255, 230, 150) })
@@ -404,7 +407,7 @@ function LobbyBuilder.Build(): Model
 	wardrobe(lobby)
 	local pads = folder("QueuePads", lobby)
 	for i, info in LobbyBuilder.Pads do
-		queuePad(pads, info, -39 + (i - 1) * 26)
+		queuePad(pads, info, (i - (#LobbyBuilder.Pads + 1) / 2) * 22)
 	end
 	local boards = folder("Boards", lobby)
 	for i, info in LobbyBuilder.Boards do

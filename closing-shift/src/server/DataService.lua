@@ -28,6 +28,8 @@ export type Profile = {
 	Cosmetics: { Owned: { [string]: boolean }, Equipped: { [string]: string } }, -- item ids; slot -> item id
 	Jobs: { Day: number, Week: number, Progress: { [string]: number }, Done: { [string]: boolean } }, -- challenges
 	Achievements: { [string]: number }, -- achievement id -> os.time() earned
+	Candy: number, -- the running event's currency (Data/Seasons)
+	Pass: { Id: string, Xp: number, Free: number, Premium: number }, -- Shift Pass season progress
 	LoadFailed: boolean?,
 }
 
@@ -100,6 +102,8 @@ local function blank(): Profile
 		Cosmetics = { Owned = {}, Equipped = {} },
 		Jobs = { Day = 0, Week = 0, Progress = {}, Done = {} },
 		Achievements = {},
+		Candy = 0,
+		Pass = { Id = "", Xp = 0, Free = 0, Premium = 0 },
 	}
 end
 
@@ -144,6 +148,20 @@ local function fromStored(data: any): Profile
 			end
 		end
 	end
+	-- a night you've cleared unlocks the next one, even if that night was added after you cleared
+	-- it (saves from before Night 4 stopped at 3)
+	local campaign = 0
+	for _, n in Config.Nights do
+		if not n.Endless then
+			campaign += 1
+		end
+	end
+	for k in p.BestByNight do
+		local n = tonumber(k)
+		if n then
+			p.Unlocked = math.max(p.Unlocked, math.min(n + 1, campaign))
+		end
+	end
 	if type(data.Stats) == "table" then
 		for k, v in data.Stats do
 			if type(v) == "number" then
@@ -181,6 +199,13 @@ local function fromStored(data: any): Profile
 		p.Starter.Bought = data.Starter.Bought == true
 	end
 	p.DoublePayUntil = tonumber(data.DoublePayUntil) or 0
+	p.Candy = tonumber(data.Candy) or 0
+	if type(data.Pass) == "table" then
+		p.Pass.Id = tostring(data.Pass.Id or "")
+		p.Pass.Xp = tonumber(data.Pass.Xp) or 0
+		p.Pass.Free = tonumber(data.Pass.Free) or 0
+		p.Pass.Premium = tonumber(data.Pass.Premium) or 0
+	end
 	if type(data.Cosmetics) == "table" then
 		if type(data.Cosmetics.Owned) == "table" then
 			for k, v in data.Cosmetics.Owned do
@@ -228,6 +253,7 @@ end
 -- Mirrors what the client needs onto the player as attributes.
 local function publish(player: Player, p: Profile)
 	player:SetAttribute("Cash", p.Cash)
+	player:SetAttribute("Candy", p.Candy)
 	player:SetAttribute("Unlocked", p.Unlocked)
 	player:SetAttribute("TotalCleaned", p.Stats.TotalCleaned)
 	player:SetAttribute("CoffeeCredits", p.CoffeeCredits)
@@ -297,6 +323,18 @@ function DataService.Save(player: Player): boolean
 			local out = blank()
 			-- this server's session is the authority for spendable values
 			out.Cash = p.Cash
+			out.Candy = p.Candy
+			-- pass progress only goes forward within a season
+			if old.Pass.Id == p.Pass.Id then
+				out.Pass = {
+					Id = p.Pass.Id,
+					Xp = math.max(p.Pass.Xp, old.Pass.Xp),
+					Free = math.max(p.Pass.Free, old.Pass.Free),
+					Premium = math.max(p.Pass.Premium, old.Pass.Premium),
+				}
+			else
+				out.Pass = table.clone(p.Pass)
+			end
 			out.CoffeeCredits = p.CoffeeCredits
 			out.Daily = { LastDay = p.Daily.LastDay, Streak = p.Daily.Streak }
 			-- progress only ever goes forward

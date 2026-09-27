@@ -2,7 +2,8 @@
 -- Cosmetics, bought with shift cash in the lobby's WARDROBE and shown to everyone. Nothing here
 -- changes gameplay. One item per slot is equipped at a time; the first item of each slot is free
 -- and owned by everyone. Vip = true: needs the VIP pass as well as the cash. Earned = true: can't be
--- bought; the game grants it (Hint says how).
+-- bought; the game grants it (Hint says how). Candy = n: an event item (Season = the event's Id),
+-- bought with that event's currency, only while the event runs; you keep it afterwards.
 --
 -- Slots and where they show:
 --   Vest   a work vest over your avatar (lobby and shift)
@@ -23,6 +24,9 @@ export type Item = {
 	Rainbow: boolean?, -- tag / trail cycles colours
 	Earned: boolean?,
 	Hint: string?,
+	Candy: number?,
+	Season: string?,
+	Pass: string?, -- a Shift Pass reward (the pass season's Id); can't be bought
 }
 
 local C = Color3.fromRGB
@@ -39,6 +43,9 @@ local Cosmetics: { Slots: { string }, SlotNames: { [string]: string }, Items: { 
 		{ Id = "VestBlack", Slot = "Vest", Name = "MIDNIGHT", Price = 6000, Color = C(15, 15, 18), Material = "Metal" },
 		{ Id = "VestHolo", Slot = "Vest", Name = "HOLOGRAPHIC", Price = 25000, Color = C(150, 220, 255), Material = "Glass" },
 		{ Id = "VestMonth", Slot = "Vest", Name = "EMPLOYEE OF THE MONTH", Price = 0, Earned = true, Hint = "30-DAY CLOCK-IN STREAK", Color = C(40, 110, 70), Material = "Fabric" },
+		{ Id = "VestPumpkin", Slot = "Vest", Name = "PUMPKIN PATCH", Price = 0, Candy = 60, Season = "Halloween", Color = C(235, 115, 25), Material = "Fabric" },
+		{ Id = "VestManager", Slot = "Vest", Name = "MANAGER'S SUIT", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS (PREMIUM) TIER 1", Color = C(28, 28, 32), Material = "Fabric" },
+		{ Id = "VestReflective", Slot = "Vest", Name = "HI-VIS", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS TIER 15", Color = C(210, 255, 60), Material = "Neon" },
 		{ Id = "VestGold", Slot = "Vest", Name = "GOLD FOIL", Price = 100000, Color = C(230, 190, 60), Material = "Foil", Vip = true },
 		-- Trails
 		{ Id = "TrailNone", Slot = "Trail", Name = "NO TRAIL", Price = 0 },
@@ -47,6 +54,9 @@ local Cosmetics: { Slots: { string }, SlotNames: { [string]: string }, Items: { 
 		{ Id = "TrailToxic", Slot = "Trail", Name = "TOXIC SPILL", Price = 15000, Color = C(120, 255, 80), Color2 = C(20, 90, 20) },
 		{ Id = "TrailRainbow", Slot = "Trail", Name = "RAINBOW", Price = 40000, Rainbow = true },
 		{ Id = "TrailGold", Slot = "Trail", Name = "MANAGER GOLD", Price = 120000, Color = C(255, 215, 80), Color2 = C(255, 250, 200), Vip = true },
+		{ Id = "TrailBats", Slot = "Trail", Name = "BAT SWARM", Price = 0, Candy = 120, Season = "Halloween", Color = C(40, 20, 50), Color2 = C(140, 60, 210) },
+		{ Id = "TrailFluorescent", Slot = "Trail", Name = "FLUORESCENT", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS TIER 30", Color = C(215, 240, 215), Color2 = C(120, 200, 150) },
+		{ Id = "TrailBodycam", Slot = "Trail", Name = "REC", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS (PREMIUM) TIER 30", Color = C(230, 40, 40), Color2 = C(40, 0, 0) },
 		{ Id = "TrailParkour", Slot = "Trail", Name = "PARKOUR", Price = 0, Earned = true, Hint = "CLEAR ALL 3 LOBBY OBBIES", Color = C(110, 230, 120), Color2 = C(255, 200, 70) },
 		-- Name tags
 		{ Id = "TagPlain", Slot = "Tag", Name = "PLAIN", Price = 0 },
@@ -54,6 +64,9 @@ local Cosmetics: { Slots: { string }, SlotNames: { [string]: string }, Items: { 
 		{ Id = "TagBlood", Slot = "Tag", Name = "CRIMSON", Price = 4000, Color = C(230, 50, 50) },
 		{ Id = "TagIce", Slot = "Tag", Name = "ICE", Price = 8000, Color = C(170, 220, 255) },
 		{ Id = "TagStreak", Slot = "Tag", Name = "ON THE CLOCK", Price = 0, Earned = true, Hint = "7-DAY CLOCK-IN STREAK", Color = C(255, 140, 40) },
+		{ Id = "TagSpooky", Slot = "Tag", Name = "JACK-O'-LANTERN", Price = 0, Candy = 40, Season = "Halloween", Color = C(255, 150, 40) },
+		{ Id = "TagNightOwl", Slot = "Tag", Name = "NIGHT OWL", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS TIER 5", Color = C(150, 190, 255) },
+		{ Id = "TagManager", Slot = "Tag", Name = "MANAGEMENT", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS (PREMIUM) TIER 25", Color = C(200, 30, 40) },
 		{ Id = "TagRainbow", Slot = "Tag", Name = "RAINBOW", Price = 30000, Rainbow = true },
 		-- Mops
 		{ Id = "MopPlain", Slot = "Mop", Name = "STANDARD ISSUE", Price = 0 },
@@ -61,12 +74,16 @@ local Cosmetics: { Slots: { string }, SlotNames: { [string]: string }, Items: { 
 		{ Id = "MopCrimson", Slot = "Mop", Name = "CRIMSON", Price = 1500, Color = C(150, 20, 25), Color2 = C(60, 10, 10) },
 		{ Id = "MopChrome", Slot = "Mop", Name = "CHROME", Price = 5000, Color = C(200, 205, 210), Color2 = C(160, 165, 170), Material = "Metal" },
 		{ Id = "MopNeon", Slot = "Mop", Name = "NEON PINK", Price = 15000, Color = C(255, 80, 200), Color2 = C(255, 180, 240), Material = "Neon" },
+		{ Id = "MopBroom", Slot = "Mop", Name = "WITCH'S BROOM", Price = 0, Candy = 150, Season = "Halloween", Color = C(90, 60, 35), Color2 = C(170, 140, 70), Material = "Wood" },
+		{ Id = "MopGraveyard", Slot = "Mop", Name = "GRAVEYARD SHIFT", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS (PREMIUM) TIER 20", Color = C(20, 20, 24), Color2 = C(130, 60, 200), Material = "Neon" },
 		{ Id = "MopVoid", Slot = "Mop", Name = "VOID", Price = 50000, Color = C(10, 10, 12), Color2 = C(80, 30, 120), Material = "Neon" },
 		-- Flashlight beams
 		{ Id = "BeamWarm", Slot = "Beam", Name = "WARM WHITE", Price = 0 },
 		{ Id = "BeamCool", Slot = "Beam", Name = "COOL WHITE", Price = 1000, Color = C(210, 230, 255) },
 		{ Id = "BeamGreen", Slot = "Beam", Name = "NIGHT VISION", Price = 3000, Color = C(120, 255, 140) },
 		{ Id = "BeamRed", Slot = "Beam", Name = "DARKROOM RED", Price = 3000, Color = C(255, 90, 80) },
+		{ Id = "BeamWitch", Slot = "Beam", Name = "WITCHLIGHT", Price = 0, Candy = 80, Season = "Halloween", Color = C(120, 255, 90) },
+		{ Id = "BeamStrobe", Slot = "Beam", Name = "PATROL", Price = 0, Earned = true, Pass = "S1", Hint = "SHIFT PASS (PREMIUM) TIER 10", Color = C(110, 140, 255) },
 		{ Id = "BeamUV", Slot = "Beam", Name = "BLACKLIGHT", Price = 20000, Color = C(160, 90, 255) },
 	},
 }

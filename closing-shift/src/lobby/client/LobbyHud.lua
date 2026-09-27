@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Progress = require(Shared:WaitForChild("Progress"))
+local Season = require(Shared:WaitForChild("Season"))
 local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 
 local LobbyHud = {}
@@ -52,7 +53,7 @@ local function button(parent: Instance, name: string, t: string, size: UDim2, po
 	return b
 end
 
-export type Actions = { Shop: () -> (), Style: () -> (), Party: () -> (), Jobs: () -> (), Awards: () -> () }
+export type Actions = { Shop: () -> (), Style: () -> (), Party: () -> (), Jobs: () -> (), Awards: () -> (), Pass: () -> () }
 
 function LobbyHud.Start(actions: Actions)
 	local gui = new("ScreenGui", { Name = "LobbyHud", ResetOnSpawn = false, IgnoreGuiInset = false, Parent = player:WaitForChild("PlayerGui") })
@@ -71,13 +72,14 @@ function LobbyHud.Start(actions: Actions)
 		{ "Party", "PARTY", Color3.fromRGB(110, 160, 220), actions.Party },
 		{ "Jobs", "JOBS", Color3.fromRGB(150, 210, 140), actions.Jobs },
 		{ "Awards", "AWARDS", Color3.fromRGB(255, 160, 70), actions.Awards },
+		{ "Pass", "SHIFT PASS", Color3.fromRGB(90, 220, 200), actions.Pass },
 	}
 	for i, b in grid do
 		local col, row = (i - 1) % 2, (i - 1) // 2
 		local btn = button(gui, b[1], b[2], UDim2.fromOffset(126, 38), UDim2.fromOffset(12 + col * 134, 120 + row * 44), Vector2.new(0, 0), b[3])
 		btn.Activated:Connect(b[4])
 	end
-	local inviteBtn = button(gui, "Invite", "INVITE FRIENDS: +10% PAY", UDim2.fromOffset(126, 38), UDim2.fromOffset(146, 208), Vector2.new(0, 0), Color3.fromRGB(110, 160, 220))
+	local inviteBtn = button(gui, "Invite", "INVITE FRIENDS: +10% PAY", UDim2.fromOffset(260, 34), UDim2.fromOffset(12, 252), Vector2.new(0, 0), Color3.fromRGB(110, 160, 220))
 
 	-- queue panel (only while on a pad)
 	local q = box(gui, "Queue", UDim2.fromOffset(360, 74), UDim2.new(0.5, 0, 1, -16), Vector2.new(0.5, 1))
@@ -91,7 +93,9 @@ function LobbyHud.Start(actions: Actions)
 	hint.TextStrokeTransparency = 0.4
 
 	local function refresh()
+		local season = Season.Current()
 		cash.Text = "$" .. tostring(player:GetAttribute("Cash") or 0)
+			.. (if season then string.format("   %d %s", (player:GetAttribute("Candy") or 0) :: number, season.Currency) else "")
 		local total = (player:GetAttribute("TotalCleaned") or 0) :: number
 		local _, rankName, nextAt = Progress.Rank(total)
 		rank.Text = if nextAt then string.format("%s  (%d TO NEXT RANK)", rankName, nextAt - total) else rankName
@@ -107,7 +111,8 @@ function LobbyHud.Start(actions: Actions)
 		if pad then
 			local n = player:GetAttribute("QueueNight") or 1
 			local left = player:GetAttribute("QueueCountdown")
-			qTitle.Text = string.format("NIGHT %d  -  %d/%d  -  %s", n, (player:GetAttribute("QueueCount") or 1) :: number, Config.Queue.MaxCrew,
+			local nd = Config.Nights[n :: number]
+			qTitle.Text = string.format("%s  -  %d/%d  -  %s", if nd and nd.Endless then string.upper(nd.Name) else "NIGHT " .. n, (player:GetAttribute("QueueCount") or 1) :: number, Config.Queue.MaxCrew,
 				if left == 0 then "CLOCKING IN..." else "STARTS IN " .. tostring(left or ""))
 			if not wasVisible then
 				qScale.Scale = 0.7

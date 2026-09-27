@@ -152,7 +152,8 @@ end
 export type Paycheck = { Lines: { { Label: string, Amount: number } }, Multiplier: number, Total: number, Earned: number }
 
 -- Works out and pays this player's paycheck for a shift. Returns the breakdown for the results screen.
-function Economy.Paycheck(player: Player, rules: any, cleanTime: number?, finalCleaner: boolean): Paycheck
+-- overtime: seconds survived, for an Overtime run.
+function Economy.Paycheck(player: Player, rules: any, cleanTime: number?, finalCleaner: boolean, overtime: number?): Paycheck
 	local P = Config.Pay
 	local lines = {}
 	local cleaned = (player:GetAttribute("Cleaned") or 0) :: number
@@ -166,6 +167,10 @@ function Economy.Paycheck(player: Player, rules: any, cleanTime: number?, finalC
 	add(string.format("SPILLS x%d", cleaned), cleaned * P.PerSpill)
 	if finalCleaner then
 		add("BACK ROOM", P.FinalSpill)
+	end
+	if overtime then
+		local minutes = math.floor(overtime / 60)
+		add(string.format("OVERTIME x%d MIN", minutes), minutes * Config.Overtime.PayPerMinute)
 	end
 	if cleanTime then
 		add("SHIFT CLEAR", rules.WinBonus)

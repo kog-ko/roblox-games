@@ -21,6 +21,9 @@ local Jobs = require(script.Parent.Jobs)
 local Zones = require(script.Parent.Zones)
 local Achievements = require(script.Parent.Achievements)
 local LateCustomer = require(script.Parent.LateCustomer)
+local Candy = require(script.Parent.Candy)
+local ShiftPass = require(script.Parent.ShiftPass)
+local Season = require(ReplicatedStorage.Shared.Season)
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ResultsRemote = Remotes:WaitForChild("Results") :: RemoteEvent
@@ -64,7 +67,7 @@ local function groupUnlocked(): number
 	if lowest == math.huge then
 		lowest = 1
 	end
-	return math.clamp(lowest, 1, Rules.NightCount())
+	return math.clamp(lowest, 1, Rules.CampaignCount())
 end
 
 -- Publishes the upcoming night so the lobby, HUD and clock can show it.
@@ -102,6 +105,7 @@ local function onCleaned(player: Player, isFinal: boolean, counts: boolean)
 	DataService.Update(player, function(p)
 		p.Stats.TotalCleaned += 1
 	end)
+	ShiftPass.AddXp(player, Config.Pass.Xp.Spill)
 	Analytics.Step(player, Analytics.Funnel.FirstSpill)
 	if isFinal then
 		finalCleaned = true
@@ -116,6 +120,7 @@ local function resetStore()
 	Zones.CloseAll(store)
 	SpillService.Reset()
 	EventDirector.Cleanup()
+	Candy.Clear()
 	Payoff.Reset()
 	store:SetAttribute("Power", true)
 end
@@ -150,7 +155,7 @@ local function runLobby()
 		end
 		intermission = 5
 	end
-	if night > groupUnlocked() then
+	if not Rules.Available(night, groupUnlocked()) then
 		night = groupUnlocked()
 	end
 	publishNight()
@@ -189,6 +194,9 @@ local function runLobby()
 end
 
 local shiftLoop: (Rules.Rules, number) -> number?
+local overtimeLoop: (Rules.Rules, number) -> ()
+local currentRules: Rules.Rules? = nil
+local overtimeSurvived: number? = nil -- seconds the last Overtime run lasted
 
 -- Returns clean time in seconds, or nil if the clock ran out.
 local function runShift(rules: Rules.Rules): number?
@@ -205,6 +213,9 @@ local function runShift(rules: Rules.Rules): number?
 			char:PivotTo(spawnCFrame())
 		end
 	end
+	-- (set before the phase changes so the HUD knows which kind of shift it's showing)
+	ReplicatedStorage:SetAttribute("Overtime", if rules.Endless then true else nil)
+	ReplicatedStorage:SetAttribute("Mess", 0)
 	setPhase("Shift")
 	for _, p in Players:GetPlayers() do
 		Mop.Give(p)
@@ -216,8 +227,16 @@ local function runShift(rules: Rules.Rules): number?
 	end
 	-- bigger crews open more of the store (stockroom, freezer) and get more, bigger spills
 	local open = Zones.Apply(store, rules.Crew)
+	currentRules = rules
+	SpillService.SetEndless(rules.Endless)
 	SpillService.StartRound(rules.SpillCount, open, rules.BigSpillChance)
+	Candy.StartShift(open)
 	revivedThisNight = false
+	if rules.Endless then
+		overtimeLoop(rules, now())
+		return nil
+	end
+	overtimeSurvived = nil
 	return shiftLoop(rules, now())
 end
 
@@ -257,6 +276,69 @@ function shiftLoop(rules: Rules.Rules, start: number): number?
 	return nil
 end
 
+-- Overtime: spills keep coming, faster every "hour", and the Manager speeds up. It's over when the
+-- floor stays at the mess cap for a few seconds (or everyone leaves).
+function overtimeLoop(rules: Rules.Rules, start: number)
+	local O = Config.Overtime
+	shiftStart = start
+	ReplicatedStorage:SetAttribute("ShiftStart", start)
+	ReplicatedStorage:SetAttribute("Overtime", true)
+	local cap = O.MessCap + O.MessPerExtra * (rules.Crew - 1)
+	ReplicatedStorage:SetAttribute("MessCap", cap)
+	EventDirector.Start(rules)
+	if not ServerBoosts.IsDayOff() then
+		Manager.Start(rules)
+	end
+	LateCustomer.Start(rules)
+	ServerBoosts.OnShiftStart()
+	local banner = Remotes:FindFirstChild("Banner") :: RemoteEvent?
+	local level = 0
+	local nextSpawn = now() + O.SpawnEvery
+	local overSince: number? = nil
+	while not skipTimer do
+		if #Players:GetPlayers() == 0 then
+			break
+		end
+		local t = now()
+		local hour = math.floor((t - start) / O.RampEvery)
+		if hour > level then
+			level = hour
+			Manager.SetSpeedMult(1 + O.ManagerSpeedUp * level)
+			if banner then
+				banner:FireAllClients(string.format("OVERTIME: HOUR %d. HE'S GETTING FASTER.", level + 1), "Overtime")
+			end
+		end
+		if t >= nextSpawn then
+			SpillService.SpawnExtra(if level >= 3 then 2 else 1)
+			local every = math.max(O.MinEvery, O.SpawnEvery * O.SpawnDecay ^ level)
+			nextSpawn = t + every / (1 + O.CrewSpeedUp * (rules.Crew - 1))
+		end
+		local mess = SpillService.ActiveCount()
+		ReplicatedStorage:SetAttribute("Mess", mess)
+		if mess >= cap then
+			overSince = overSince or t
+			ReplicatedStorage:SetAttribute("MessWarn", math.max(0, math.ceil(O.Grace - (t - (overSince :: number)))))
+			if t - (overSince :: number) >= O.Grace then
+				break
+			end
+		elseif overSince then
+			overSince = nil
+			ReplicatedStorage:SetAttribute("MessWarn", nil)
+		end
+		task.wait(0.1)
+	end
+	overtimeSurvived = now() - start
+	EventDirector.Stop()
+	Manager.Stop()
+	LateCustomer.Stop()
+	SpillService.Stop()
+	ReplicatedStorage:SetAttribute("MessWarn", nil)
+	setPhase("LightsOut")
+	store:SetAttribute("Power", false)
+	task.wait(Config.LightsOutOnLoseTime)
+	ReplicatedStorage:SetAttribute("Overtime", nil)
+end
+
 local function runResults(rules: Rules.Rules, cleanTime: number?)
 	readyRequested = false -- NEXT SHIFT on the results screen counts from here
 	local teamCleaned = 0
@@ -272,7 +354,7 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 	-- MVP: the crew's top cleaner, when there's a crew and a clear winner
 	local mvp = if #crew > 1 and crew[1].Cleaned > crew[2].Cleaned then crew[1].UserId else nil
 	local ranked = cleanTime ~= nil and not assisted
-	local final = cleanTime ~= nil and rules.Night >= Rules.NightCount()
+	local final = cleanTime ~= nil and not rules.Endless and rules.Night >= Rules.CampaignCount()
 	local key = tostring(rules.Night)
 	for _, p in Players:GetPlayers() do
 		local newBest = false
@@ -281,7 +363,7 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 			if cleanTime then
 				prof.Stats.ShiftsWon += 1
 				-- beating a night unlocks the next one
-				prof.Unlocked = math.max(prof.Unlocked, math.min(rules.Night + 1, Rules.NightCount()))
+				prof.Unlocked = math.max(prof.Unlocked, math.min(rules.Night + 1, Rules.CampaignCount()))
 				local best = prof.BestByNight[key]
 				if best == nil or cleanTime < best then
 					prof.BestByNight[key] = cleanTime
@@ -308,7 +390,27 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 		else
 			Analytics.Event(p, "ShiftFailed", (p:GetAttribute("Cleaned") or 0) :: number, rules.Name, rules.Night)
 		end
-		local pay = Economy.Paycheck(p, rules, cleanTime, finalCleaner == p)
+		local survived = if rules.Endless then overtimeSurvived else nil
+		if survived then
+			DataService.Update(p, function(prof)
+				local stats = prof.Stats :: any
+				stats.BestOvertime = math.max((stats.BestOvertime or 0) :: number, math.floor(survived))
+			end)
+			task.spawn(Leaderboard.SubmitOvertime, p, survived)
+		end
+		local pay = Economy.Paycheck(p, rules, cleanTime, finalCleaner == p, survived)
+		-- Shift Pass XP for the night
+		ShiftPass.AddXp(p, (if cleanTime then Config.Pass.Xp.NightCleared else 0)
+			+ (if survived then math.floor(survived / 60) * Config.Pass.Xp.OvertimeMinute else 0))
+		-- the running event's candy
+		local season = Season.Current()
+		if season then
+			local candy = (if cleanTime then season.CandyPerWin else 0)
+				+ (if survived then math.floor(survived / 60) * season.CandyPerOvertimeMinute else 0)
+			if Candy.Add(p, candy) > 0 then
+				table.insert(pay.Lines, { Label = string.format("%s +%d", season.Currency, candy), Amount = 0 })
+			end
+		end
 		task.spawn(Leaderboard.AddEarnings, p, pay.Earned)
 		-- daily / weekly jobs
 		Jobs.Record(p, "clean", (p:GetAttribute("Cleaned") or 0) :: number)
@@ -359,7 +461,9 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 			task.spawn(Leaderboard.SetCareer, p, prof.Stats.TotalCleaned)
 		end
 		ResultsRemote:FireClient(p, {
-			Outcome = if cleanTime then "Clean" else "Fired",
+			Outcome = if rules.Endless then "Overtime" elseif cleanTime then "Clean" else "Fired",
+			Survived = if rules.Endless then overtimeSurvived else nil,
+			BestOvertime = prof and (prof.Stats :: any).BestOvertime,
 			CleanTime = cleanTime,
 			Cleaned = p:GetAttribute("Cleaned") or 0,
 			TeamCleaned = teamCleaned,
@@ -378,15 +482,17 @@ local function runResults(rules: Rules.Rules, cleanTime: number?)
 		})
 	end
 	-- a win moves the party on to the next night (if everyone has it); a loss replays this one
-	if cleanTime then
-		night = math.min(rules.Night + 1, groupUnlocked(), Rules.NightCount())
+	if rules.Endless then
+		night = rules.Night -- Overtime again
+	elseif cleanTime then
+		night = math.min(rules.Night + 1, groupUnlocked(), Rules.CampaignCount())
 	else
 		night = math.min(rules.Night, groupUnlocked())
 	end
 	publishNight()
 	setPhase("Results")
 	-- YOU'RE FIRED: Clock In Late can be bought for a few seconds (once per night)
-	local offer = cleanTime == nil and not revivedThisNight and Config.Monetization.Products.ClockInLate ~= 0
+	local offer = cleanTime == nil and not rules.Endless and not revivedThisNight and Config.Monetization.Products.ClockInLate ~= 0
 	local window = Config.Monetization.Rewards.ClockInLateWindow
 	ReplicatedStorage:SetAttribute("ReviveOfferUntil", if offer then workspace:GetServerTimeNow() + window else nil)
 	if offer then
@@ -486,7 +592,11 @@ function RoundManager.Init(s: Instance)
 		DataService.Update(player, function(prof)
 			prof.Stats.Catches += 1
 		end)
-		RoundManager.AddPenalty(Config.Manager.TimePenalty)
+		if currentRules and currentRules.Endless then
+			SpillService.SpawnExtra(Config.Overtime.CatchMess) -- no clock in Overtime: it costs mess instead
+		else
+			RoundManager.AddPenalty(Config.Manager.TimePenalty)
+		end
 		Analytics.Event(player, "ManagerCatch", 1, nil, night)
 		if Config.Monetization.Products.SecondChance ~= 0 then
 			Analytics.Event(player, "OfferShown", 1, "SecondChance", night)

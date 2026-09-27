@@ -16,6 +16,9 @@
 --   Tutorial     show the on-screen tutorial hints
 --   Tease        line shown on the results screen, hinting at the next night
 --   WinBonus     paycheck bonus for clearing the night
+--   Dark         the power is out for the whole shift; spills only show up in your flashlight
+--   Endless      no clock, no back-room spill: survive as long as you can (Overtime)
+--   UnlockAt     (endless modes) available once the crew's Unlocked night reaches this
 local Nights = {
 	{
 		Name = "Orientation",
@@ -62,8 +65,45 @@ local Nights = {
 		PowerCuts = { Enabled = true, Every = { 45, 75 }, Duration = { 10, 18 } },
 		Store = "QuikStop",
 		Tutorial = false,
-		Tease = "NIGHTS 4-5 COMING SOON.",
+		Tease = "Tomorrow is inventory night. The lights stay off.",
 		WinBonus = 120,
+	},
+	{
+		Name = "Inventory",
+		SpillCount = 22,
+		ShiftLength = 7 * 60,
+		SpillsPerExtra = 7,
+		TimePerExtra = 0.12,
+		BigSpillChance = 0.3,
+		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "Leak" },
+		EventGap = { 40, 65 },
+		Manager = { Enabled = true, Speed = 12.5 },
+		PowerCuts = { Enabled = false, Every = { 60, 90 }, Duration = { 8, 12 } },
+		Dark = true,
+		Store = "QuikStop",
+		Tutorial = false,
+		Tease = "NIGHT 5 COMING SOON. TRY OVERTIME IN THE MEANTIME.",
+		WinBonus = 160,
+	},
+	-- OVERTIME: endless. No clock and no back-room spill; spills keep coming (Config.Overtime) and
+	-- the shift ends when the mess gets out of hand. Opens once you've beaten Night 3.
+	{
+		Name = "Overtime",
+		Endless = true,
+		UnlockAt = 4,
+		SpillCount = 10,
+		ShiftLength = 3600, -- (not used: there's no clock)
+		SpillsPerExtra = 4,
+		TimePerExtra = 0,
+		BigSpillChance = 0.25,
+		Events = { "SignGlitch", "DoorChime", "Footprints", "IdenticalAisle", "Mannequin", "LightsOut", "Leak" },
+		EventGap = { 35, 60 },
+		Manager = { Enabled = true, Speed = 9 },
+		PowerCuts = { Enabled = true, Every = { 60, 100 }, Duration = { 8, 14 } },
+		Store = "QuikStop",
+		Tutorial = false,
+		Tease = "",
+		WinBonus = 0,
 	},
 }
 

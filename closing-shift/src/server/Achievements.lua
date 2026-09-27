@@ -11,6 +11,8 @@ local DataService = require(script.Parent.DataService)
 local Economy = require(script.Parent.Economy)
 
 local Achievements = {}
+-- Called for each achievement earned (the Shift Pass gives XP; set in init, which avoids a require loop).
+Achievements.OnEarned = nil :: ((Player) -> ())?
 local DATA = Config.Achievements
 
 -- The value a goal is measured against. Most are plain stats; a few are worked out.
@@ -68,6 +70,9 @@ function Achievements.Check(player: Player)
 	end)
 	for i, a in earned do
 		Economy.AddCash(player, a.Reward, "Achievement:" .. a.Id)
+		if Achievements.OnEarned then
+			Achievements.OnEarned(player)
+		end
 		if banner then
 			task.delay((i - 1) * 3, function()
 				banner:FireClient(player, string.format("ACHIEVEMENT: %s  +$%d", a.Name, a.Reward), "Achievement")

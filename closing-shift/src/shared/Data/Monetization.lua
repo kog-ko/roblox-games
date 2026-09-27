@@ -18,6 +18,7 @@ local Monetization = {
 		VIP = 1998812448, -- R$ 249
 		IndustrialMop = 1998350469, -- R$ 149
 		BigFlashlight = 1998770452, -- R$ 99
+		ShiftPass = 0, -- R$ 299 (premium Shift Pass, Season 1; 0 until created in Creator Hub)
 	},
 
 	-- Developer products (bought each time).
@@ -64,6 +65,7 @@ local Monetization = {
 		VIP = { Name = "VIP", Description = "2x paycheck, gold name tag, VIP lounge" },
 		IndustrialMop = { Name = "INDUSTRIAL MOP", Description = "25% faster cleaning, gold mop" },
 		BigFlashlight = { Name = "BIG FLASHLIGHT", Description = "Wider beam, longer battery" },
+		ShiftPass = { Name = "SHIFT PASS: SEASON 1", Description = "Premium reward on every tier, 5 exclusive looks" },
 		LightsOn = { Name = "LIGHTS ON", Description = "All lights on for 60s, Manager frozen" },
 		HireJanitor = { Name = "HIRE A JANITOR", Description = "An NPC cleans 3 spills" },
 		SpillStorm = { Name = "SPILL STORM", Description = "5 more spills for everyone" },

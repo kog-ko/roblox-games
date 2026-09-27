@@ -138,7 +138,7 @@ local function tick()
 						partyHint[p] = now + 10
 						Banner:FireClient(p, "YOUR PARTY LEADER PICKS THE PAD", "Queue")
 					end
-				elseif state.Night and unlocked(p) < state.Night then
+				elseif state.Night and not Rules.Available(state.Night, unlocked(p)) then
 					locked += 1
 				elseif #members < Config.Queue.MaxCrew then
 					table.insert(members, p)
@@ -150,7 +150,7 @@ local function tick()
 			if Party.LeaderOf(leader) == leader then
 				for _, m in Party.Members(leader) do
 					if m ~= leader and not table.find(members, m) and not taken[m] and #members < Config.Queue.MaxCrew
-						and (cooldown[m] or 0) < now and (state.Night == nil or unlocked(m) >= state.Night) then
+						and (cooldown[m] or 0) < now and (state.Night == nil or Rules.Available(state.Night, unlocked(m))) then
 						table.insert(members, m)
 					end
 				end

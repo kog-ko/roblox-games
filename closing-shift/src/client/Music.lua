@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Season = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Season"))
 
 local Music = {}
 local MU = Config.Music
@@ -52,10 +53,14 @@ end
 
 local function lobby()
 	local list = table.clone(MU.Lobby)
+	local season = Season.Current()
 	local rng = Random.new()
 	for i = #list, 2, -1 do
 		local j = rng:NextInteger(1, i)
 		list[i], list[j] = list[j], list[i]
+	end
+	if season and season.Music then
+		table.insert(list, 1, season.Music) -- the event's track opens the playlist
 	end
 	local i = 0
 	local current: Track? = nil

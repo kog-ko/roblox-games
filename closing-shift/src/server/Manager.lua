@@ -38,6 +38,7 @@ local store: Instance
 local model: Model? = nil
 local conn: RBXScriptConnection? = nil
 local speed = 0
+local baseSpeed = 0
 local runId = 0
 local waypoints: { Vector3 } = {}
 local cooldownUntil = 0
@@ -476,7 +477,8 @@ function Manager.Start(rules: any)
 	end
 	runId += 1
 	local myRun = runId
-	speed = rules.Manager.Speed
+	baseSpeed = rules.Manager.Speed
+	speed = baseSpeed
 	cooldownUntil = os.clock() + 5 -- a few seconds' grace at the start of the shift
 	isWatched = false
 	walking = false
@@ -546,6 +548,11 @@ function Manager.UndoCatch(player: Player, window: number): boolean
 	-- give them a moment before he can move again
 	cooldownUntil = math.max(cooldownUntil, os.clock() + C.CooldownAfterCatch)
 	return true
+end
+
+-- Overtime: he gets faster every "hour" (1 = the night's speed).
+function Manager.SetSpeedMult(mult: number)
+	speed = baseSpeed * mult
 end
 
 -- Lights On boost: he can't move for this long.

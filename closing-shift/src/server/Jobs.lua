@@ -6,9 +6,11 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage.Shared.Config)
 local Progress = require(ReplicatedStorage.Shared.Progress)
 local DataService = require(script.Parent.DataService)
 local Economy = require(script.Parent.Economy)
+local ShiftPass = require(script.Parent.ShiftPass)
 
 local Jobs = {}
 local Banner: RemoteEvent? = nil
@@ -90,6 +92,7 @@ function Jobs.Record(player: Player, kind: string, amount: number, arg: number?)
 	end)
 	for _, j in finished do
 		Economy.AddCash(player, j.Reward, "Job:" .. j.Id)
+		ShiftPass.AddXp(player, Config.Pass.Xp.Job)
 		if Banner then
 			Banner:FireClient(player, string.format("JOB DONE: %s  +$%d", j.Text, j.Reward), "Job")
 		end

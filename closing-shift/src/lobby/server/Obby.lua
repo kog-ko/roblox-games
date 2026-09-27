@@ -16,6 +16,7 @@ local Economy = require(script.Parent.Economy)
 local Cosmetics = require(script.Parent.Cosmetics)
 local Jobs = require(script.Parent.Jobs)
 local Achievements = require(script.Parent.Achievements)
+local ShiftPass = require(script.Parent.ShiftPass)
 
 local Obby = {}
 
@@ -79,6 +80,7 @@ local function reward(p: Player, name: string, seconds: number)
 		Banner:FireClient(p, "ALL OBBIES CLEARED: PARKOUR TRAIL UNLOCKED (STYLE)", "Obby")
 	end
 	Achievements.Check(p)
+	ShiftPass.AddXp(p, Config.Pass.Xp.Obby)
 	task.spawn(DataService.Save, p)
 end
 

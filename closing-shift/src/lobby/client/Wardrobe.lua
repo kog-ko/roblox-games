@@ -7,6 +7,7 @@ local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Season = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Season"))
 local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
@@ -16,6 +17,7 @@ Wardrobe.Open = nil :: (() -> ())?
 local player = Players.LocalPlayer :: Player
 local DATA = Config.Cosmetics
 local GOLD = Color3.fromRGB(255, 215, 90)
+local EVENT = Color3.fromRGB(255, 150, 40)
 local GREEN = Color3.fromRGB(120, 200, 110)
 local GREY = Color3.fromRGB(90, 90, 85)
 
@@ -70,7 +72,7 @@ function Wardrobe.Start(openShop: () -> ())
 		FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(230, 160, 230), Parent = frame,
 	})
 	local cashText = new("TextLabel", {
-		Text = "$0", Size = UDim2.fromOffset(120, 28), Position = UDim2.new(1, -176, 0, 10), BackgroundTransparency = 1,
+		Text = "$0", Size = UDim2.fromOffset(260, 28), Position = UDim2.new(1, -316, 0, 10), BackgroundTransparency = 1,
 		FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = GOLD, Parent = frame,
 	})
 	local close = button(frame, "Close", "X", UDim2.fromOffset(40, 36), UDim2.new(1, -48, 0, 6), Color3.fromRGB(200, 70, 60))
@@ -86,7 +88,9 @@ function Wardrobe.Start(openShop: () -> ())
 	local tabButtons: { [string]: TextButton } = {}
 
 	local function render()
+		local s = Season.Current()
 		cashText.Text = "$" .. tostring(player:GetAttribute("Cash") or 0)
+			.. (if s then string.format("  %d %s", (player:GetAttribute("Candy") or 0) :: number, s.Currency) else "")
 		for s, b in tabButtons do
 			b.BackgroundColor3 = if s == slot then Color3.fromRGB(230, 160, 230) else GREY
 		end
@@ -99,8 +103,14 @@ function Wardrobe.Start(openShop: () -> ())
 		local vip = player:GetAttribute("VIP") == true
 		local equipped = player:GetAttribute("Equip_" .. slot)
 		local order = 0
+		local season = Season.Current()
+		local candy = (player:GetAttribute("Candy") or 0) :: number
 		for _, item in DATA.Items do
 			if item.Slot ~= slot then
+				continue
+			end
+			-- event items only show while their event runs (or once you own one)
+			if item.Candy and not owned(item.Id) and not (season and season.Id == item.Season) then
 				continue
 			end
 			order += 1
@@ -118,15 +128,18 @@ function Wardrobe.Start(openShop: () -> ())
 				new("UIGradient", { Color = ColorSequence.new(keys), Parent = swatch })
 			end
 			new("TextLabel", {
-				Text = item.Name .. (if item.Vip then "  (VIP)" else ""), Size = UDim2.new(1, -250, 0, 24), Position = UDim2.fromOffset(50, 4),
+				Text = item.Name .. (if item.Vip then "  (VIP)" elseif item.Candy then "  (" .. (item.Season or "EVENT"):upper() .. ")" else ""),
+				Size = UDim2.new(1, -250, 0, 24), Position = UDim2.fromOffset(50, 4),
 				BackgroundTransparency = 1, FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = if item.Vip then GOLD else Color3.fromRGB(230, 230, 220), Parent = row,
+				TextColor3 = if item.Vip then GOLD elseif item.Candy then EVENT else Color3.fromRGB(230, 230, 220), Parent = row,
 			})
-			local have = (item.Price == 0 and not item.Earned) or owned(item.Id)
+			local have = (item.Price == 0 and not item.Earned and not item.Candy) or owned(item.Id)
+			local currency = if season then season.Currency else "CANDY"
 			new("TextLabel", {
-				Text = if have then "OWNED" elseif item.Earned then "EARN: " .. (item.Hint or "?") else "$" .. item.Price, Size = UDim2.new(1, -250, 0, 16), Position = UDim2.fromOffset(50, 28),
+				Text = if have then "OWNED" elseif item.Candy then string.format("%d %s  -  LIMITED", item.Candy, currency)
+					elseif item.Earned then "EARN: " .. (item.Hint or "?") else "$" .. item.Price, Size = UDim2.new(1, -250, 0, 16), Position = UDim2.fromOffset(50, 28),
 				BackgroundTransparency = 1, FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = if have then Color3.fromRGB(150, 220, 150) elseif item.Earned then Color3.fromRGB(150, 200, 255) elseif cash >= item.Price then GOLD else Color3.fromRGB(200, 120, 110), Parent = row,
+				TextColor3 = if have then Color3.fromRGB(150, 220, 150) elseif item.Candy then EVENT elseif item.Earned then Color3.fromRGB(150, 200, 255) elseif cash >= item.Price then GOLD else Color3.fromRGB(200, 120, 110), Parent = row,
 			})
 			local b
 			if equipped == item.Id then
@@ -136,6 +149,12 @@ function Wardrobe.Start(openShop: () -> ())
 				b = button(row, "Action", "EQUIP", UDim2.fromOffset(180, 36), UDim2.new(1, -186, 0, 6), GREEN)
 				b.Activated:Connect(function()
 					equip:FireServer(item.Id)
+				end)
+			elseif item.Candy then
+				b = button(row, "Action", string.format("GET: %d %s", item.Candy, currency), UDim2.fromOffset(180, 36), UDim2.new(1, -186, 0, 6),
+					if candy >= item.Candy then EVENT else GREY)
+				b.Activated:Connect(function()
+					buy:FireServer(item.Id)
 				end)
 			elseif item.Earned then
 				b = button(row, "Action", "LOCKED", UDim2.fromOffset(180, 36), UDim2.new(1, -186, 0, 6), GREY)
@@ -179,7 +198,7 @@ function Wardrobe.Start(openShop: () -> ())
 		end
 	end)
 	player.AttributeChanged:Connect(function(attr)
-		if gui.Enabled and (attr == "Cash" or attr == "OwnedCosmetics" or attr == "VIP" or attr:sub(1, 6) == "Equip_") then
+		if gui.Enabled and (attr == "Cash" or attr == "Candy" or attr == "OwnedCosmetics" or attr == "VIP" or attr:sub(1, 6) == "Equip_") then
 			render()
 		end
 	end)

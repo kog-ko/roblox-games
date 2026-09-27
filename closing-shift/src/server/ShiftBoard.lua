@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local RoundManager = require(script.Parent.RoundManager)
+local Rules = require(ReplicatedStorage.Shared.Rules)
 local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 
 local PickNight = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PickNight") :: RemoteEvent
@@ -33,13 +34,14 @@ local function render()
 		t.Name = "Night" .. i
 		t.LayoutOrder = i
 		t.BackgroundTransparency = 1
-		t.Size = UDim2.new(1, 0, 0.3, -4)
+		t.Size = UDim2.new(1, 0, 1 / #Config.Nights, -4)
 		t.FontFace = Fonts.Mono
 		t.TextScaled = true
 		t.TextXAlignment = Enum.TextXAlignment.Left
-		local mark = if i == selected then "> " elseif i > unlocked then "x " else "  "
-		t.Text = string.format("%sNIGHT %d  %s", mark, i, string.upper(n.Name))
-		t.TextColor3 = if i == selected then PICKED elseif i > unlocked then LOCKED else INK
+		local open = Rules.Available(i, unlocked)
+		local mark = if i == selected then "> " elseif not open then "x " else "  "
+		t.Text = if n.Endless then string.format("%s%s", mark, string.upper(n.Name)) else string.format("%sNIGHT %d  %s", mark, i, string.upper(n.Name))
+		t.TextColor3 = if i == selected then PICKED elseif not open then LOCKED else INK
 		t.Parent = list
 	end
 	local phase = ReplicatedStorage:GetAttribute("Phase")
@@ -81,7 +83,7 @@ function ShiftBoard.Init(store: Instance)
 			return
 		end
 		lastPick[player] = now
-		if n < 1 or n > RoundManager.GroupUnlocked() then
+		if not Rules.Available(n, RoundManager.GroupUnlocked()) then
 			return
 		end
 		RoundManager.SetNight(n)

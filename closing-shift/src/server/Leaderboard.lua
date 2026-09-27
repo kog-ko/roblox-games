@@ -74,6 +74,11 @@ local function weekStore(week: number): OrderedDataStore?
 	return ordered((Config.WeeklyStoreName:gsub("_v(%d+)$", "_W" .. week .. "_v%1")))
 end
 
+-- ClosingShift_Overtime_v1 -> ClosingShift_Overtime_W2960_v1
+local function overtimeStore(week: number): OrderedDataStore?
+	return ordered((Config.Overtime.WeeklyStoreName:gsub("_v(%d+)$", "_W" .. week .. "_v%1")))
+end
+
 local function top(ods: OrderedDataStore, ascending: boolean, size: number): { any }?
 	local ok, result = pcall(ods.GetSortedAsync, ods, ascending, size)
 	if not ok then
@@ -104,7 +109,21 @@ end
 
 function Leaderboard.Refresh(night: number?)
 	local n = night or currentNight()
-	local ods = nightStore(n)
+	local nd = Config.Nights[n]
+	if nd and nd.Endless then
+		-- Overtime has no clean time: show this week's longest runs instead
+		local oods = overtimeStore(Progress.Week())
+		local oentries = oods and top(oods, false, Config.LeaderboardSize)
+		if oentries then
+			local lines = { "LONGEST OVERTIME (WEEK)" }
+			for rank, entry in oentries do
+				local uid = tonumber(entry.key) or 0
+				table.insert(lines, string.format("%2d. %-16s %d:%02d", rank, nameFor(uid):sub(1, 16), entry.value // 60, entry.value % 60))
+			end
+			pages.night = if #lines > 1 then table.concat(lines, "\n") else "OVERTIME\nnobody yet this week.\nhow long can you last?"
+		end
+	end
+	local ods = if nd and nd.Endless then nil else nightStore(n)
 	local entries = ods and top(ods, true, Config.LeaderboardSize)
 	if entries then
 		local lines = { string.format("NIGHT %d", n) }
@@ -196,6 +215,8 @@ function Leaderboard.Entries(kind: string, arg: number?, size: number?): { { Nam
 		ods = ordered(Config.EarningsStoreName)
 	elseif kind == "career" then
 		ods = ordered(Config.CareerStoreName)
+	elseif kind == "overtime" then
+		ods = overtimeStore(Progress.Week())
 	end
 	local entries = ods and top(ods, ascending, size or Config.LeaderboardSize)
 	if not entries then
@@ -207,6 +228,26 @@ function Leaderboard.Entries(kind: string, arg: number?, size: number?): { { Nam
 		table.insert(out, { Name = nameFor(uid), UserId = uid, Value = e.value })
 	end
 	return out
+end
+
+-- Records an Overtime run (whole seconds survived) on this week's board if it's their best this week.
+function Leaderboard.SubmitOvertime(player: Player, seconds: number)
+	if testNoSave() then
+		return
+	end
+	local ods = overtimeStore(Progress.Week())
+	if not ods then
+		return
+	end
+	local value = math.floor(seconds)
+	pcall(function()
+		ods:UpdateAsync(tostring(player.UserId), function(old)
+			if type(old) == "number" and old >= value then
+				return nil
+			end
+			return value
+		end)
+	end)
 end
 
 -- Adds spills to this week's count for a player; publishes their new total (WeeklyCleaned).

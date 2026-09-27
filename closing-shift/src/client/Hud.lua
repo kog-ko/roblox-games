@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Clock = require(Shared:WaitForChild("Clock"))
 local Progress = require(Shared:WaitForChild("Progress"))
+local Season = require(Shared:WaitForChild("Season"))
 local Fonts = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Fonts"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ReadyUp = Remotes:WaitForChild("ReadyUp") :: RemoteEvent
@@ -84,6 +85,10 @@ function Hud.Start()
 	-- Cash, always visible (top right)
 	local cashBox = box(gui, "Cash", UDim2.fromOffset(150, 38), UDim2.new(1, -12, 0, 60), Vector2.new(1, 0))
 	local cashText = text(cashBox, "Text", "$0", nil, nil, Color3.fromRGB(255, 215, 90))
+	-- the running event's candy, under the cash
+	local candyBox = box(gui, "Candy", UDim2.fromOffset(150, 30), UDim2.new(1, -12, 0, 102), Vector2.new(1, 0))
+	local candyText = text(candyBox, "Text", "", nil, nil, Color3.fromRGB(255, 150, 40))
+	candyBox.Visible = false
 	local coffeeBtn = button(bar, "Coffee", "COFFEE", UDim2.fromOffset(130, 46), UDim2.new(1, -12, 0.42, 0), Vector2.new(1, 0.5), Color3.fromRGB(190, 140, 80))
 
 	-- Lobby panel
@@ -144,9 +149,22 @@ function Hud.Start()
 
 	-- State -> UI
 	local function refreshCounts()
-		spillText.Text = "SPILLS " .. tostring(ReplicatedStorage:GetAttribute("SpillsRemaining") or 0)
+		if ReplicatedStorage:GetAttribute("Overtime") then
+			-- Overtime: how close the floor is to the mess cap
+			local warn = ReplicatedStorage:GetAttribute("MessWarn")
+			spillText.Text = string.format("MESS %d/%d", (ReplicatedStorage:GetAttribute("Mess") or 0) :: number, (ReplicatedStorage:GetAttribute("MessCap") or 0) :: number)
+			spillText.TextColor3 = if warn then RED else INK
+		else
+			spillText.Text = "SPILLS " .. tostring(ReplicatedStorage:GetAttribute("SpillsRemaining") or 0)
+			spillText.TextColor3 = INK
+		end
 		mineText.Text = "YOU " .. tostring(player:GetAttribute("Cleaned") or 0)
+		local season = Season.Current()
 		cashText.Text = "$" .. tostring(player:GetAttribute("Cash") or 0)
+		candyBox.Visible = season ~= nil
+		if season then
+			candyText.Text = string.format("%d %s", (player:GetAttribute("Candy") or 0) :: number, season.Currency)
+		end
 		local best = player:GetAttribute("Best")
 		bestText.Text = if type(best) == "number" then "BEST: " .. Clock.Duration(best) else "BEST: --"
 		-- READY on the left, SHOP (added by Shop.lua) on the right
@@ -182,7 +200,7 @@ function Hud.Start()
 			results.Visible = false
 			resTitle.Text = ""
 			nextBtn.Text = "NEXT SHIFT"
-			showToast("MOP EVERY SPILL BEFORE 6:00 AM", 4)
+			showToast(if ReplicatedStorage:GetAttribute("Overtime") then "OVERTIME: KEEP THE MESS UNDER CONTROL" else "MOP EVERY SPILL BEFORE 6:00 AM", 4)
 		end
 		refreshCounts()
 	end
@@ -199,6 +217,14 @@ function Hud.Start()
 	ReplicatedStorage:GetAttributeChangedSignal("Phase"):Connect(refreshPhase)
 	ReplicatedStorage:GetAttributeChangedSignal("CountdownMode"):Connect(refreshPhase)
 	ReplicatedStorage:GetAttributeChangedSignal("SpillsRemaining"):Connect(refreshCounts)
+	ReplicatedStorage:GetAttributeChangedSignal("Mess"):Connect(refreshCounts)
+	ReplicatedStorage:GetAttributeChangedSignal("MessWarn"):Connect(function()
+		refreshCounts()
+		local warn = ReplicatedStorage:GetAttribute("MessWarn")
+		if type(warn) == "number" then
+			showToast(string.format("THE STORE IS A MESS! CLEAN UP! %d", warn), 1.2)
+		end
+	end)
 	player.AttributeChanged:Connect(refreshCounts)
 	refreshPhase()
 
@@ -209,6 +235,10 @@ function Hud.Start()
 			local returning = ReplicatedStorage:GetAttribute("CountdownMode") == "Return"
 			countText.Text = if returning then "PRESS READY TO START" else "SHIFT STARTS IN " .. n
 			returnText.Text = if phase == "Lobby" and returning and inShiftPlace then "BACK TO THE LOBBY IN " .. n .. "s" else ""
+		elseif phase == "Shift" and ReplicatedStorage:GetAttribute("Overtime") then
+			local elapsed = math.max(0, workspace:GetServerTimeNow() - ((ReplicatedStorage:GetAttribute("ShiftStart") or 0) :: number))
+			clockText.Text = string.format("OT %d:%02d", elapsed // 60, math.floor(elapsed % 60))
+			clockText.TextColor3 = if ReplicatedStorage:GetAttribute("MessWarn") then INK:Lerp(RED, 0.5 + 0.5 * math.sin(os.clock() * 8)) else Color3.fromRGB(255, 190, 90)
 		elseif phase == "Shift" then
 			local start = (ReplicatedStorage:GetAttribute("ShiftStart") or 0) :: number
 			local elapsed = workspace:GetServerTimeNow() - start
@@ -276,7 +306,15 @@ function Hud.Start()
 		local scale = results:FindFirstChildOfClass("UIScale") or new("UIScale", { Parent = results })
 		scale.Scale = 0.6
 		TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-		if r.Outcome == "Fired" then
+		if r.Outcome == "Overtime" then
+			local function mmss(s: number?): string
+				return if s then string.format("%d:%02d", s // 60, math.floor(s % 60)) else "--"
+			end
+			resTitle.Text = "OVERTIME OVER"
+			resTitle.TextColor3 = Color3.fromRGB(255, 190, 90)
+			resBody.Text = string.format("YOU LASTED   %s\nYOUR BEST    %s\n\nYOU CLEANED  %d\nTEAM CLEANED %d\nLIFETIME     %d",
+				mmss(r.Survived), mmss(r.BestOvertime), r.Cleaned, r.TeamCleaned, r.TotalCleaned)
+		elseif r.Outcome == "Fired" then
 			resTitle.Text = "YOU'RE FIRED"
 			resTitle.TextColor3 = RED
 			resBody.Text = string.format("6:00 AM. SPILLS LEFT ON THE FLOOR.\n\nYOU CLEANED  %d\nTEAM CLEANED %d\nLIFETIME     %d",
@@ -300,19 +338,19 @@ function Hud.Start()
 				resTitle.Text ..= "  MVP!"
 			end
 		end
-		if r.Outcome ~= "Fired" and r.Ranked == false then
+		if r.Outcome == "Clean" and r.Ranked == false then
 			resBody.Text ..= "\n(BOOSTED RUN: NOT ON THE FASTEST BOARD)"
 		end
 		if type(r.Pay) == "table" and type(r.Pay.Lines) == "table" then
 			local lines = {}
 			for _, l in r.Pay.Lines do
-				table.insert(lines, string.format("%-20s +$%d", l.Label, l.Amount))
+				table.insert(lines, if l.Amount == 0 then l.Label else string.format("%-20s +$%d", l.Label, l.Amount))
 			end
 			local mult = if (r.Pay.Multiplier or 1) > 1 then string.format("  (x%d)", r.Pay.Multiplier) else ""
 			resBody.Text ..= "\n\nPAYCHECK\n" .. table.concat(lines, "\n") .. string.format("\nTOTAL  +$%d%s", r.Pay.Total, mult)
 		end
 		if r.Final then
-			resBody.Text ..= string.format("\n\nNIGHTS 4-5 COMING SOON.\nLIKE THE GAME TO UNLOCK THEM FASTER!\nLIKE GOAL: %s", tostring(Config.LikeGoal))
+			resBody.Text ..= string.format("\n\nNIGHT 5 COMING SOON. OVERTIME IS OPEN.\nLIKE THE GAME TO UNLOCK IT FASTER!\nLIKE GOAL: %s", tostring(Config.LikeGoal))
 		elseif r.Outcome ~= "Fired" and type(r.Tease) == "string" and r.Tease ~= "" then
 			resBody.Text ..= "\n\n" .. string.upper(r.Tease)
 		end

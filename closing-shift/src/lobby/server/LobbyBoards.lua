@@ -20,6 +20,8 @@ local function format(kind: string, value: number): string
 		return Clock.Duration(value / 10)
 	elseif kind == "earnings" then
 		return "$" .. value
+	elseif kind == "overtime" then
+		return string.format("%d:%02d", value // 60, value % 60)
 	end
 	return tostring(value)
 end
@@ -27,7 +29,7 @@ end
 local function refresh(b: Board)
 	local arg = nil
 	if b.Kind == "night" then
-		fastestNight = fastestNight % Rules.NightCount() + 1
+		fastestNight = fastestNight % Rules.CampaignCount() + 1
 		arg = fastestNight
 		if b.Title then
 			b.Title.Text = "FASTEST SHIFTS: NIGHT " .. fastestNight

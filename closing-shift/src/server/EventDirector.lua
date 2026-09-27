@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local Config = require(ReplicatedStorage.Shared.Config)
 local SpillService = require(script.Parent.SpillService)
+local Season = require(ReplicatedStorage.Shared.Season)
 local StoreBuilder = require(script.Parent.StoreBuilder)
 
 local EventDirector = {}
@@ -15,6 +16,7 @@ local store: Instance
 local runId = 0
 local powerHolds = 0
 local forcedOn = false -- Lights On boost: power cuts can't take the lights while this is set
+local darkRelease: (() -> ())? = nil -- a Dark night's all-shift power cut
 local rng = Random.new()
 
 -- What every event module receives.
@@ -174,6 +176,13 @@ function EventDirector.Start(rules: any)
 	runId += 1
 	local myRun = runId
 	local used: { [string]: boolean } = {}
+	local names = table.clone(rules.Events)
+	local season = Season.Current()
+	if season and #rules.Events > 0 then -- (not on the tutorial night)
+		for _, extra in season.Events do
+			table.insert(names, extra)
+		end
+	end
 	task.spawn(function()
 		while true do
 			task.wait(rng:NextNumber(rules.EventGap[1], rules.EventGap[2]))
@@ -181,7 +190,7 @@ function EventDirector.Start(rules: any)
 				return
 			end
 			local choices = {}
-			for _, name in rules.Events do
+			for _, name in names do
 				local t = Config.Events[name]
 				if handlers[name] and not used[name] and not (t and t.UsesSpills and SpillService.IsFinalPhase()) then
 					table.insert(choices, name)
@@ -198,10 +207,20 @@ function EventDirector.Start(rules: any)
 	if rules.PowerCuts.Enabled then
 		task.spawn(powerCutLoop, rules, myRun)
 	end
+	-- a dark night: the power is out from the first minute to the last (Lights On still works)
+	if rules.Dark then
+		darkRelease = cutPower()
+	end
+	ReplicatedStorage:SetAttribute("DarkNight", rules.Dark == true)
 end
 
 function EventDirector.Stop()
 	runId += 1
+	if darkRelease then
+		darkRelease()
+		darkRelease = nil
+	end
+	ReplicatedStorage:SetAttribute("DarkNight", false)
 end
 
 -- Put the store back to normal between rounds.
