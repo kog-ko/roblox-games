@@ -62,6 +62,7 @@ function PartyUi.Start()
 	fit()
 	label(frame, "PARTY", UDim2.new(1, -70, 0, 34), UDim2.fromOffset(12, 6), BLUE)
 	local close = button(frame, "X", UDim2.fromOffset(40, 34), UDim2.new(1, -48, 0, 6), Color3.fromRGB(200, 70, 60))
+	close.Modal = true -- frees the mouse from first person while open
 	local mine = label(frame, "", UDim2.new(1, -140, 0, 40), UDim2.fromOffset(12, 46), GOLD)
 	mine.TextWrapped = true
 	local leaveBtn = button(frame, "LEAVE", UDim2.fromOffset(110, 34), UDim2.new(1, -122, 0, 48), Color3.fromRGB(200, 110, 90))

@@ -5,6 +5,9 @@
 -- finishing all of them unlocks the Parkour trail, and every finish is announced to the server.
 -- Also runs the moving parts (Mover / Spinner tags).
 -- The HUD reads ObbyRun (obby name) and ObbyStart (server time) from the player.
+-- A run is failed (the timer goes away) if you end up back on the lot, the road or the sidewalk
+-- away from the start pad, wander off the course, or die / respawn. Falling into the obby's own
+-- hazards (ObbyKill) just puts you back at your checkpoint with the clock still running.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -141,6 +144,51 @@ local function animate()
 	end)
 end
 
+local FLOOR = { Ground = true, Road = true, Sidewalk = true, Line = true, Dash = true }
+local failParams = RaycastParams.new()
+failParams.FilterType = Enum.RaycastFilterType.Exclude
+
+local function fail(p: Player)
+	if not runs[p] then
+		return
+	end
+	stop(p)
+	Sfx:FireClient(p, "Fall")
+	Banner:FireClient(p, "RUN FAILED. STEP ON THE START PAD TO TRY AGAIN", "Obby")
+end
+
+-- Checks every run a few times a second for a fall back to the ground / leaving the course.
+local function watchRuns()
+	local acc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		acc += dt
+		if acc < 0.3 then
+			return
+		end
+		acc = 0
+		for p, run in runs do
+			local char = p.Character
+			local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			local start = starts[run.obby]
+			if not root or not hum or hum.Health <= 0 or not start then
+				fail(p)
+				continue
+			end
+			local fromStart = (root.Position - start.Position).Magnitude
+			if fromStart > 260 then
+				fail(p) -- nowhere near the course any more
+				continue
+			end
+			failParams.FilterDescendantsInstances = { char }
+			local hit = workspace:Raycast(root.Position, Vector3.new(0, -6, 0), failParams)
+			if hit and FLOOR[hit.Instance.Name] and fromStart > 14 and os.clock() - run.started > 1 then
+				fail(p) -- fell (or walked) off, back on the lot
+			end
+		end
+	end)
+end
+
 function Obby.Init()
 	Banner = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Banner") :: RemoteEvent
 	Sfx = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ObbySfx") :: RemoteEvent
@@ -195,6 +243,16 @@ function Obby.Init()
 		reward(p, name, seconds)
 	end)
 	animate()
+	watchRuns()
+	local function onPlayer(p: Player)
+		p.CharacterAdded:Connect(function()
+			fail(p) -- respawned mid-run
+		end)
+	end
+	Players.PlayerAdded:Connect(onPlayer)
+	for _, p in Players:GetPlayers() do
+		onPlayer(p)
+	end
 	Players.PlayerRemoving:Connect(function(p)
 		runs[p] = nil
 		lastTouch[p] = nil

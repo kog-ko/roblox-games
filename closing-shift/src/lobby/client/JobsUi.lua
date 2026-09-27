@@ -50,6 +50,7 @@ function JobsUi.Start()
 		Text = "X", Size = UDim2.fromOffset(40, 34), Position = UDim2.new(1, -48, 0, 6), BackgroundColor3 = Color3.fromRGB(200, 70, 60),
 		BorderSizePixel = 0, FontFace = Fonts.Body, TextScaled = true, Parent = frame,
 	})
+	close.Modal = true -- frees the mouse from first person while open
 	local list = new("ScrollingFrame", {
 		Size = UDim2.new(1, -24, 1, -52), Position = UDim2.fromOffset(12, 46), BackgroundTransparency = 1, BorderSizePixel = 0,
 		ScrollBarThickness = 6, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = frame,

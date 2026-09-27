@@ -37,7 +37,10 @@
           "Shop": { "$path": "src/client/Shop.lua" },
           "Music": { "$path": "src/client/Music.lua" },
           "Fit": { "$path": "src/client/Fit.lua" },
-          "Prefs": { "$path": "src/client/Prefs.lua" }
+          "Prefs": { "$path": "src/client/Prefs.lua" },
+          "CameraFx": { "$path": "src/client/CameraFx.lua" },
+          "Movement": { "$path": "src/client/Movement.lua" },
+          "Controls": { "$path": "src/client/Controls.lua" }
         }
       }
     }

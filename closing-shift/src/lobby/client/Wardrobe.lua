@@ -76,6 +76,7 @@ function Wardrobe.Start(openShop: () -> ())
 		FontFace = Fonts.Body, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = GOLD, Parent = frame,
 	})
 	local close = button(frame, "Close", "X", UDim2.fromOffset(40, 36), UDim2.new(1, -48, 0, 6), Color3.fromRGB(200, 70, 60))
+	close.Modal = true -- frees the mouse from first person while open
 	local tabs = new("Frame", { Size = UDim2.new(1, -24, 0, 34), Position = UDim2.fromOffset(12, 48), BackgroundTransparency = 1, Parent = frame })
 	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = tabs })
 	local list = new("ScrollingFrame", {

@@ -18,7 +18,7 @@ local Monetization = {
 		VIP = 1998812448, -- R$ 249
 		IndustrialMop = 1998350469, -- R$ 149
 		BigFlashlight = 1998770452, -- R$ 99
-		ShiftPass = 0, -- R$ 299 (premium Shift Pass, Season 1; 0 until created in Creator Hub)
+		ShiftPass = 1999197108, -- R$ 299 (premium Shift Pass, Season 1)
 	},
 
 	-- Developer products (bought each time).

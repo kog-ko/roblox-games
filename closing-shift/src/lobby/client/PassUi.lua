@@ -91,6 +91,7 @@ function PassUi.Start()
 		Text = "X", Size = UDim2.fromOffset(40, 34), Position = UDim2.new(1, -48, 0, 6), BackgroundColor3 = Color3.fromRGB(200, 70, 60),
 		BorderSizePixel = 0, FontFace = Fonts.Bold, TextScaled = true, Parent = frame,
 	})
+	close.Modal = true -- frees the mouse from first person while open
 	local sub = label(frame, "", UDim2.new(1, -24, 0, 18), UDim2.fromOffset(12, 42), Color3.fromRGB(170, 180, 175))
 	local barBack = new("Frame", { Size = UDim2.new(1, -24, 0, 12), Position = UDim2.fromOffset(12, 64), BackgroundColor3 = Color3.fromRGB(40, 44, 46), BorderSizePixel = 0, Parent = frame })
 	local barFill = new("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = TEAL, BorderSizePixel = 0, Parent = barBack })

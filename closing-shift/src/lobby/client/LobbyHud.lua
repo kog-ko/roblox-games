@@ -61,8 +61,8 @@ function LobbyHud.Start(actions: Actions)
 
 	-- you: cash, rank, this week
 	-- the left column (you, the buttons, invite) scales down together on small screens
-	local left = new("Frame", { Name = "Left", BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(260, 280), Parent = gui })
-	Fit.Scale(left, Vector2.new(260, 280), Vector2.new(24, 130))
+	local left = new("Frame", { Name = "Left", BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(260, 300), Parent = gui })
+	Fit.Scale(left, Vector2.new(260, 300), Vector2.new(24, 130))
 	local me = box(left, "Me", UDim2.fromOffset(260, 104), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0))
 	local cash = text(me, "Cash", "$0", UDim2.new(1, -16, 0, 30), UDim2.fromOffset(8, 4), GOLD)
 	local rank = text(me, "Rank", "TRAINEE", UDim2.new(1, -16, 0, 20), UDim2.fromOffset(8, 36))
@@ -82,6 +82,24 @@ function LobbyHud.Start(actions: Actions)
 		local col, row = (i - 1) % 2, (i - 1) // 2
 		local btn = button(left, b[1], b[2], UDim2.fromOffset(126, 38), UDim2.fromOffset(col * 134, 112 + row * 44), Vector2.new(0, 0), b[3])
 		btn.Activated:Connect(b[4])
+	end
+	-- first person locks the mouse: hold Alt (or press the gamepad's View button) for a cursor to
+	-- click these; the panels they open free it on their own
+	local cursor = new("TextButton", { Name = "Cursor", Text = "", BackgroundTransparency = 1, Size = UDim2.fromOffset(1, 1), Modal = true, Visible = false, Parent = gui })
+	local UIS = game:GetService("UserInputService")
+	UIS.InputBegan:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.LeftAlt or input.KeyCode == Enum.KeyCode.RightAlt or input.KeyCode == Enum.KeyCode.ButtonSelect then
+			cursor.Visible = not (input.KeyCode == Enum.KeyCode.ButtonSelect and cursor.Visible)
+		end
+	end)
+	UIS.InputEnded:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.LeftAlt or input.KeyCode == Enum.KeyCode.RightAlt then
+			cursor.Visible = false
+		end
+	end)
+	if UIS.KeyboardEnabled then
+		local altHint = text(left, "AltHint", "HOLD ALT FOR THE CURSOR", UDim2.fromOffset(260, 16), UDim2.fromOffset(0, 282), Color3.fromRGB(170, 175, 165))
+		altHint.TextStrokeTransparency = 0.5
 	end
 	local inviteBtn = button(left, "Invite", "INVITE FRIENDS: +10% PAY", UDim2.fromOffset(260, 34), UDim2.fromOffset(0, 244), Vector2.new(0, 0), Color3.fromRGB(110, 160, 220))
 

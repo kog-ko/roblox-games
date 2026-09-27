@@ -78,6 +78,14 @@ Stations.Init(l)
 Obby.Init()
 SeasonDecor.Init(l, "Lobby")
 -- tell everyone arriving about the running event
+-- the lobby plays exactly like the store: first person through the bodycam
+local function firstPerson(p: Player)
+	p.CameraMode = Enum.CameraMode.LockFirstPerson
+end
+game:GetService("Players").PlayerAdded:Connect(firstPerson)
+for _, p in game:GetService("Players"):GetPlayers() do
+	firstPerson(p)
+end
 game:GetService("Players").PlayerAdded:Connect(function(p)
 	local s = Season.Current()
 	if s then

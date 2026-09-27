@@ -266,11 +266,19 @@ Config.Sounds = {
 
 -- Music. All licensed for Roblox experiences (DistroKid catalogue). M toggles music on and off.
 Config.Music = {
-	Lobby = { id(140515672182827), id(70551940079407), id(138693920798127), id(94615661666814) }, -- night-drive lo-fi
+	-- soft piano and mellow lo-fi: easy to listen to for a long time
+	Lobby = {
+		id(71704368986281), -- 3AM Soft Piano Lofi
+		id(89422480566589), -- Warm Vinyl Memories
+		id(138693920798127), -- Midnight Coffee with You
+		id(94215310603669), -- Soft Piano Lofi
+		id(114854851606017), -- Cozy Night Vibes
+		id(140515672182827), -- Quiet Streets at 2AM
+	},
 	Break = id(139799942555122), -- the store radio between shifts (played muffled)
 	ShiftCalm = id(117508801974613), -- "Feeling Uneasy": under every shift
 	ShiftDanger = id(127708788779804), -- "Room Pulse": swells as the Manager closes in
-	Volume = { Lobby = 0.28, Break = 0.3, ShiftCalm = 0.22, ShiftDanger = 0.5 },
+	Volume = { Lobby = 0.2, Break = 0.3, ShiftCalm = 0.22, ShiftDanger = 0.5 },
 }
 Config.ScrubLoop = NumberRange.new(1, 3) -- seconds of the scrub clip looped while mopping
 Config.PitchVariation = 0.08 -- every one-shot plays at 1 +/- this speed so repeats don't sound robotic
